@@ -1,0 +1,6 @@
+{
+  "name": "JalDrishti - Micro-Watershed Water Accountability Grid",
+  "description": "National micro-watershed water accountability ledger, geospatial stress surveillance, recharge asset registry & intervention simulator for SFIC Theme 2.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
