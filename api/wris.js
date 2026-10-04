@@ -128,7 +128,7 @@ async function queryWrisEndpoint(endpoint, state, district, agency, startDate, e
   const url = `https://indiawris.gov.in${endpoint}?stateName=${encodedState}&districtName=${encodedDistrict}&agencyName=${encodedAgency}&startdate=${startDate}&enddate=${endDate}&download=false&page=1&size=100`;
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 3500);
+  const timeoutId = setTimeout(() => controller.abort(), 1500);
 
   try {
     const response = await fetch(url, {

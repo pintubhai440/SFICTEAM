@@ -34,7 +34,7 @@ export default function App() {
   const [currentRole, setCurrentRole] = useState<UserRoleType>('overview');
 
   // Cache version to automatically purge stale mock data from previous sessions
-  const STORAGE_VERSION = 'v7_isro_bhuvan_wbis';
+  const STORAGE_VERSION = 'v8_isro_bhuvan_wbis_ndwi_grey';
 
   // Load persisted state or initial seed data with version check
   const [waterBodies, setWaterBodies] = useState<WaterBody[]>(() => {

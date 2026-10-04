@@ -11,6 +11,33 @@ export type WrisDatasetType =
   | 'basin_reservoir' 
   | 'basin_rainfall';
 
+export interface BhuvanWbisMetadata {
+  ndwiScore: number; // -1.00 to +1.00 Normalized Difference Water Index (ISRO Green vs NIR)
+  ndwiClassification: 
+    | 'Deep Surface Water (NDWI > 0.3)' 
+    | 'Moderate Surface Water (0.1 - 0.3)' 
+    | 'Shallow / Turbid Water (0.0 - 0.1)' 
+    | 'Dry Mud / Saturated Soil (-0.15 - 0.0)' 
+    | 'Extinct / Encroached / Built-up (< -0.15)';
+  waterSpreadAreaHa: number; // Current Water Spread Area in Hectares
+  historicalBaselineHa: number; // Historical Satellite Baseline (2015-2018) in Hectares
+  areaChangePercent: number; // Percentage change over 15-day or 10-year cycle
+  satelliteMission: string; // e.g. "ISRO Resourcesat-2A (AWiFS / LISS-IV)"
+  sensorName?: string; // e.g. "AWiFS (56m) + Sentinel-2 MSI (10m Multi-spectral)"
+  last15DayPassDate: string; // Latest 15-day orbital observation
+  previousPassDate: string; // Previous pass 15 days earlier
+  nextPassDate: string; // Next scheduled 15-day pass
+  cycleDays: number; // 15
+  cloudCoverPercent: number; // Cloud obscuration during satellite pass
+  siltationIndexPercent: number; // Silt accumulation percentage
+  encroachmentRisk: 'None' | 'Low' | 'Moderate' | 'Severe' | 'Total Extinction';
+  waterRemainingPercent: number; // 0 to 100%
+  estimatedVolumeMCM: number; // In Million Cubic Metres
+  isExtinct: boolean; // True if talab sookh kar mit gaya (Grey color status)
+  extinctionReason?: string; // Reason: e.g. "Unauthorized road construction, siltation choke & brick kilns"
+  bhuvanLulcTheme?: string; // e.g. "Water Bodies - Inland Wetlands / Waterlogged"
+}
+
 export interface WaterBody {
   id: string;
   name: string;
@@ -33,6 +60,7 @@ export interface WaterBody {
     rechargeTrend?: string;
     subBasin?: string;
   };
+  bhuvanWbis?: BhuvanWbisMetadata;
   district: string;
   mandal: string;
   village: string;
