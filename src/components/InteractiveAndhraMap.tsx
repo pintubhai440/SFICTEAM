@@ -78,7 +78,7 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
   const [selectedDistrict, setSelectedDistrict] = useState<string>(() => {
     if (currentRole === 'nodal_vizianagaram') return 'Vizianagaram';
     if (currentRole === 'nodal_parvathipuram') return 'Parvathipuram Manyam';
-    return districtFilter !== 'all' ? districtFilter : 'Vizianagaram';
+    return districtFilter !== 'all' ? districtFilter : 'all';
   });
 
   // Filter: 'all' | 'extinct' | 'red' | 'green' | 'yellow' | 'blue'
@@ -91,7 +91,7 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   // Bhuvan 15-day NDWI satellite overlay mode
   const [isNdwiSatelliteOverlayActive, setIsNdwiSatelliteOverlayActive] = useState(true);
-  // Expanded map height
+  // Expanded map height (default to generous height for high-definition surveillance)
   const [isMapExpanded, setIsMapExpanded] = useState(false);
 
   // Active selected water body
@@ -547,6 +547,20 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
             <span className="hidden sm:inline text-[11px]">{isMapExpanded ? 'Standard' : 'Enlarge'}</span>
           </button>
 
+          {/* Map Size Expand/Collapse button */}
+          <button
+            onClick={() => setIsMapExpanded(!isMapExpanded)}
+            className={`p-1.5 rounded-lg border transition-colors cursor-pointer flex items-center gap-1 text-xs font-semibold ${
+              isMapExpanded 
+                ? 'bg-blue-50 border-blue-300 text-blue-700' 
+                : 'border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+            title={isMapExpanded ? 'Standard Map Size' : 'Expand Map (बड़ा नक्शा बनाएं)'}
+          >
+            {isMapExpanded ? <Minimize2 className="w-3.5 h-3.5 text-blue-600" /> : <Maximize2 className="w-3.5 h-3.5 text-slate-600" />}
+            <span className="hidden sm:inline">{isMapExpanded ? 'Normal Map' : 'Bada Map'}</span>
+          </button>
+
           {/* Theme switcher */}
           <button
             onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
@@ -559,12 +573,12 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
           {/* District selector buttons */}
           <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs font-semibold">
             <button
-              onClick={() => setSelectedDistrict('Vizianagaram')}
-              className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-                effectiveDistrict === 'Vizianagaram' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+              onClick={() => setSelectedDistrict('all')}
+              className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
+                effectiveDistrict === 'all' ? 'bg-[#0047ab] text-white shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Vizianagaram
+              <span>🌐 All Grid (3 Districts)</span>
             </button>
             <button
               onClick={() => setSelectedDistrict('Parvathipuram Manyam')}
@@ -575,20 +589,20 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
               Parvathipuram
             </button>
             <button
+              onClick={() => setSelectedDistrict('Vizianagaram')}
+              className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                effectiveDistrict === 'Vizianagaram' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Vizianagaram
+            </button>
+            <button
               onClick={() => setSelectedDistrict('Visakhapatnam')}
               className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
                 effectiveDistrict === 'Visakhapatnam' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Visakhapatnam
-            </button>
-            <button
-              onClick={() => setSelectedDistrict('all')}
-              className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
-                effectiveDistrict === 'all' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              All Grid
             </button>
           </div>
 
@@ -850,7 +864,7 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
       {/* ============================================================== */}
       {/* 3. MAP CANVAS WITH NO OVERLAPPING LABELS & CLEAN WATER NETWORK */}
       {/* ============================================================== */}
-      <div className={`relative w-full ${isMapExpanded ? 'h-[750px] sm:h-[840px] lg:h-[920px]' : 'h-[580px] sm:h-[660px] lg:h-[720px]'} overflow-hidden select-none transition-all duration-300 ${
+      <div className={`relative w-full ${isMapExpanded ? 'h-[850px] sm:h-[950px] lg:h-[1050px]' : 'h-[680px] sm:h-[760px] lg:h-[840px]'} overflow-hidden select-none transition-all duration-300 ${
         theme === 'light' ? 'bg-[#f8fafc]' : 'bg-gradient-to-b from-slate-950 via-[#071326] to-[#0b1b36]'
       }`}>
         {effectiveDistrict === 'Vizianagaram' ? (
@@ -898,392 +912,17 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
             onLodgeComplaint={onLodgeComplaint}
           />
         ) : (
-          <>
-            {/* Floating 15-Day NDWI Satellite Mode Banner */}
-        {isNdwiSatelliteOverlayActive && (
-          <div className="absolute top-3 left-3 z-20 bg-slate-950/90 backdrop-blur-md border border-indigo-500/50 text-white rounded-xl px-3 py-1.5 text-xs font-mono flex items-center gap-2 shadow-lg">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-            <span className="text-amber-300 font-bold flex items-center gap-1">
-              <Satellite className="w-3.5 h-3.5" />
-              <span>ISRO WBIS:</span>
-            </span>
-            <span className="text-slate-300">15-Day Optical Pass Active</span>
-            <span className="text-sky-300 border-l border-slate-700 pl-2 hidden sm:inline">Formula: (Green - NIR)/(Green + NIR)</span>
-          </div>
-        )}
-
-        <style>{`
-          @keyframes riverFlow {
-            from { stroke-dashoffset: 60; }
-            to { stroke-dashoffset: 0; }
-          }
-          @keyframes beaconPing {
-            0% { r: 9px; opacity: 0.95; stroke-width: 2px; }
-            50% { r: 24px; opacity: 0.4; stroke-width: 1.5px; }
-            100% { r: 42px; opacity: 0; stroke-width: 0.5px; }
-          }
-          @keyframes dangerAlertPulse {
-            0% { r: 12px; opacity: 0.9; stroke-width: 2.8px; }
-            50% { r: 38px; opacity: 0.5; stroke-width: 1.8px; }
-            100% { r: 64px; opacity: 0; stroke-width: 0.5px; }
-          }
-          @keyframes satelliteScan {
-            0% { transform: translateY(-40px); opacity: 0.2; }
-            50% { opacity: 0.75; }
-            100% { transform: translateY(720px); opacity: 0.15; }
-          }
-          .river-flow-line {
-            stroke-dasharray: 6 6;
-            animation: riverFlow 2.4s linear infinite;
-          }
-          .beacon-ring {
-            animation: beaconPing 2.5s ease-out infinite;
-            transform-origin: center;
-          }
-          .danger-ring {
-            animation: dangerAlertPulse 1.8s ease-out infinite;
-            transform-origin: center;
-          }
-          .satellite-scan-line {
-            animation: satelliteScan 8s linear infinite;
-          }
-        `}</style>
-
-        <svg viewBox="0 0 950 680" className="w-full h-full">
-          <defs>
-            <pattern id="lightGrid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke={theme === 'light' ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.04)'} strokeWidth="0.8" />
-            </pattern>
-
-            <linearGradient id="coastalWater" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#0284c7" stopOpacity={theme === 'light' ? '0.15' : '0.3'} />
-              <stop offset="100%" stopColor="#0369a1" stopOpacity={theme === 'light' ? '0.35' : '0.6'} />
-            </linearGradient>
-
-            {/* 1. Red Danger Zone Aura */}
-            <radialGradient id="redHazardGlow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#ef4444" stopOpacity="0.55" />
-              <stop offset="60%" stopColor="#dc2626" stopOpacity="0.25" />
-              <stop offset="100%" stopColor="#991b1b" stopOpacity="0" />
-            </radialGradient>
-
-            {/* 2. Blue Normal Active Aura */}
-            <radialGradient id="blueActiveGlow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#0284c7" stopOpacity="0.5" />
-              <stop offset="60%" stopColor="#38bdf8" stopOpacity="0.2" />
-              <stop offset="100%" stopColor="#0369a1" stopOpacity="0" />
-            </radialGradient>
-
-            {/* 3. Green Pristine Good Condition Aura */}
-            <radialGradient id="greenPristineGlow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#10b981" stopOpacity="0.55" />
-              <stop offset="60%" stopColor="#34d399" stopOpacity="0.25" />
-              <stop offset="100%" stopColor="#047857" stopOpacity="0" />
-            </radialGradient>
-
-            {/* 4. Yellow Medium Moderate Stress Aura */}
-            <radialGradient id="yellowMediumGlow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.55" />
-              <stop offset="60%" stopColor="#d97706" stopOpacity="0.25" />
-              <stop offset="100%" stopColor="#92400e" stopOpacity="0" />
-            </radialGradient>
-
-            {/* 5. Grey Extinct Sookh Kar Mit Gaya Aura */}
-            <radialGradient id="greyExtinctGlow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#64748b" stopOpacity="0.55" />
-              <stop offset="60%" stopColor="#475569" stopOpacity="0.25" />
-              <stop offset="100%" stopColor="#1e293b" stopOpacity="0" />
-            </radialGradient>
-          </defs>
-
-          {/* Grid Background */}
-          <rect width="950" height="680" fill="url(#lightGrid)" />
-
-          {/* ============================================================== */}
-          {/* DISTRICT CONTOUR & TOPOLOGY                                    */}
-          {/* ============================================================== */}
-          {effectiveDistrict === 'Vizianagaram' ? (
-            /* Vizianagaram Official District Map Shape (Image 2) */
-            <g>
-              <path
-                d="M 530,35 
-                   C 570,50 630,75 660,110 
-                   C 690,140 705,190 710,240 
-                   C 720,290 760,330 790,370 
-                   C 820,410 830,460 825,510 
-                   C 820,545 790,570 760,590 
-                   C 730,610 680,620 640,615 
-                   C 590,610 540,610 490,605 
-                   C 430,600 370,605 320,590 
-                   C 260,570 210,540 180,480 
-                   C 160,440 190,390 220,350 
-                   C 240,320 230,270 240,220 
-                   C 250,170 270,130 310,100 
-                   C 360,65 440,50 490,40 Z"
-                fill={theme === 'light' ? 'rgba(241, 245, 249, 0.85)' : 'rgba(2, 132, 199, 0.12)'}
-                stroke={theme === 'light' ? '#94a3b8' : '#38bdf8'}
-                strokeWidth={theme === 'light' ? '2.2' : '2.8'}
-                filter="drop-shadow(0 4px 12px rgba(0,0,0,0.06))"
-              />
-
-              {/* Bay of Bengal Sea Area */}
-              <path
-                d="M 760,590 Q 820,540 850,460 L 950,460 L 950,680 L 710,680 Z"
-                fill="url(#coastalWater)"
-                stroke={theme === 'light' ? '#38bdf8' : 'rgba(56, 189, 248, 0.4)'}
-                strokeWidth="1.2"
-              />
-              <text x="850" y="580" fill={theme === 'light' ? '#0369a1' : 'rgba(56, 189, 248, 0.6)'} fontSize="12" fontWeight="bold" letterSpacing="3" transform="rotate(45, 850, 580)">
-                BAY OF BENGAL
-              </text>
-
-              {/* Geographic Annotations */}
-              <text x="60" y="240" fill={theme === 'light' ? '#94a3b8' : 'rgba(148, 163, 184, 0.5)'} fontSize="10.5" fontWeight="bold" letterSpacing="1.5">
-                CHHATTISGARH / EASTERN GHATS
-              </text>
-              <text x="50" y="520" fill={theme === 'light' ? '#94a3b8' : 'rgba(148, 163, 184, 0.5)'} fontSize="10.5" fontWeight="bold" letterSpacing="1.5">
-                VISHAKHAPATNAM BORDER
-              </text>
-              <text x="810" y="270" fill={theme === 'light' ? '#94a3b8' : 'rgba(148, 163, 184, 0.5)'} fontSize="10.5" fontWeight="bold" letterSpacing="1.5">
-                SRIKAKULAM BORDER
-              </text>
-
-              <g opacity={theme === 'light' ? '0.12' : '0.18'}>
-                <text x="475" y="300" fill={theme === 'light' ? '#0f172a' : '#38bdf8'} fontSize="36" fontWeight="900" letterSpacing="5" textAnchor="middle">
-                  VIZIANAGARAM
-                </text>
-              </g>
-
-              {/* Real Rivers with Animated Flow (Clickable to inspect river stations) */}
-              <g 
-                className="cursor-pointer group"
-                onClick={() => {
-                  const target = allAvailableWaterBodies.find(wb => wb.id === 'wb-vzm-05' || wb.name.includes('Vegavati'));
-                  if (target) handleSelectWaterBody(target);
-                }}
-              >
-                <path d="M 310,138 L 482,197 L 620,160 T 710,140" fill="none" stroke={theme === 'light' ? '#0284c7' : '#38bdf8'} strokeWidth="2.5" className="river-flow-line" />
-                <circle r="4" fill="#38bdf8"><animateMotion path="M 310,138 L 482,197 L 620,160 T 710,140" dur="4s" repeatCount="indefinite" /></circle>
-              </g>
-
-              <g 
-                className="cursor-pointer group"
-                onClick={() => {
-                  const target = allAvailableWaterBodies.find(wb => wb.id === 'wb-vzm-04' || wb.name.includes('Champavathi'));
-                  if (target) handleSelectWaterBody(target);
-                }}
-              >
-                <path d="M 297,229 Q 370,300 445,386 L 544,496" fill="none" stroke={theme === 'light' ? '#0284c7' : '#38bdf8'} strokeWidth="2.8" className="river-flow-line" />
-                <path d="M 445,386 L 618,457 L 618,529 L 729,561" fill="none" stroke={theme === 'light' ? '#0284c7' : '#38bdf8'} strokeWidth="3.2" className="river-flow-line" />
-                <circle r="4" fill="#38bdf8"><animateMotion path="M 297,229 Q 370,300 445,386 L 544,496" dur="5s" repeatCount="indefinite" /></circle>
-                <circle r="4.5" fill="#0284c7"><animateMotion path="M 445,386 L 618,457 L 618,529 L 729,561" dur="4.5s" repeatCount="indefinite" /></circle>
-              </g>
-
-              <g 
-                className="cursor-pointer group"
-                onClick={() => {
-                  const target = allAvailableWaterBodies.find(wb => wb.id === 'wb-vzm-02' || wb.name.includes('Tatipudi') || wb.name.includes('Gosthani'));
-                  if (target) handleSelectWaterBody(target);
-                }}
-              >
-                <path d="M 211,496 L 272,457 Q 340,510 400,560" fill="none" stroke={theme === 'light' ? '#0284c7' : '#38bdf8'} strokeWidth="2.8" className="river-flow-line" />
-              </g>
-            </g>
-          ) : effectiveDistrict === 'Parvathipuram Manyam' ? (
-            /* Parvathipuram Manyam District Contour */
-            <g>
-              <path
-                d="M 160,80 L 520,60 L 780,120 L 840,240 L 720,380 L 520,360 L 320,320 L 180,240 Z"
-                fill={theme === 'light' ? 'rgba(241, 245, 249, 0.85)' : 'rgba(14, 116, 144, 0.25)'}
-                stroke={theme === 'light' ? '#0891b2' : '#38bdf8'}
-                strokeWidth="2.5"
-              />
-              <g opacity={theme === 'light' ? '0.12' : '0.18'}>
-                <text x="500" y="220" fill={theme === 'light' ? '#0f172a' : '#38bdf8'} fontSize="32" fontWeight="900" letterSpacing="4" textAnchor="middle">
-                  PARVATHIPURAM MANYAM
-                </text>
-              </g>
-              <path d="M 260,100 Q 480,180 720,280" fill="none" stroke="#0284c7" strokeWidth="3.5" className="river-flow-line" />
-              <circle r="4.5" fill="#38bdf8"><animateMotion path="M 260,100 Q 480,180 720,280" dur="4s" repeatCount="indefinite" /></circle>
-            </g>
-          ) : effectiveDistrict === 'Visakhapatnam' ? (
-            /* Visakhapatnam District Contour */
-            <g>
-              <path
-                d="M 180,140 L 540,120 L 800,260 L 830,480 L 640,540 L 360,520 L 180,440 Z"
-                fill={theme === 'light' ? 'rgba(241, 245, 249, 0.85)' : 'rgba(16, 185, 129, 0.2)'}
-                stroke={theme === 'light' ? '#059669' : '#34d399'}
-                strokeWidth="2.5"
-              />
-              <g opacity={theme === 'light' ? '0.12' : '0.18'}>
-                <text x="500" y="320" fill={theme === 'light' ? '#0f172a' : '#34d399'} fontSize="32" fontWeight="900" letterSpacing="4" textAnchor="middle">
-                  VISAKHAPATNAM
-                </text>
-              </g>
-              <path d="M 240,220 Q 480,360 760,420" fill="none" stroke="#0284c7" strokeWidth="3" className="river-flow-line" />
-              <circle r="4.5" fill="#10b981"><animateMotion path="M 240,220 Q 480,360 760,420" dur="4.5s" repeatCount="indefinite" /></circle>
-            </g>
-          ) : (
-            /* All Grid Combined */
-            <g>
-              <path d="M 120,40 L 520,40 L 760,110 L 820,200 L 580,240 L 360,190 L 190,150 Z" fill="rgba(14, 116, 144, 0.15)" stroke="#38bdf8" strokeWidth="1.5" />
-              <path d="M 190,150 L 360,190 L 580,240 L 820,200 L 830,370 L 650,410 L 360,420 L 210,360 L 140,260 Z" fill="rgba(2, 132, 199, 0.2)" stroke="#38bdf8" strokeWidth="2" />
-              <path d="M 210,360 L 360,420 L 650,410 L 830,370 L 810,540 L 600,550 L 290,540 L 170,480 Z" fill="rgba(16, 185, 129, 0.2)" stroke="#34d399" strokeWidth="2" />
-            </g>
-          )}
-
-          {/* ============================================================== */}
-          {/* ACTIVE REGIONAL AURA GLOW                                      */}
-          {/* ============================================================== */}
-          {activeWaterBody && (() => {
-            const { x, y } = projectCoords(activeWaterBody.coordinates.lat, activeWaterBody.coordinates.lng);
-            const color = activeWaterBody.statusColor;
-            const isRed = color === 'red';
-            const isGreen = color === 'green';
-            const isYellow = color === 'yellow';
-            const isGrey = color === 'grey';
-            const glowId = isRed 
-              ? 'url(#redHazardGlow)' 
-              : isGreen 
-              ? 'url(#greenPristineGlow)' 
-              : isYellow
-              ? 'url(#yellowMediumGlow)'
-              : isGrey
-              ? 'url(#greyExtinctGlow)'
-              : 'url(#blueActiveGlow)';
-            const ringColor = isRed ? '#ef4444' : isGreen ? '#10b981' : isYellow ? '#f59e0b' : isGrey ? '#64748b' : '#0284c7';
-
-            return (
-              <g className="pointer-events-none">
-                <circle cx={x} cy={y} r="120" fill={glowId} />
-                <circle cx={x} cy={y} r="65" stroke={ringColor} strokeWidth="1.5" strokeDasharray="4 4" fill="none" opacity="0.75" />
-                <circle cx={x} cy={y} className={isRed ? 'danger-ring' : 'beacon-ring'} stroke={ringColor} fill="none" />
-              </g>
-            );
-          })()}
-
-          {/* ============================================================== */}
-          {/* MAP PINS: CLEAN RADAR BEACONS WITHOUT OVERLAPPING LABELS       */}
-          {/* ============================================================== */}
-          {filteredWaterBodies.map((wb) => {
-            const { x, y } = projectCoords(wb.coordinates.lat, wb.coordinates.lng);
-            const style = getColorClasses(wb.statusColor);
-            const isSelected = activeWaterBody?.id === wb.id;
-            const isHovered = hoveredWaterBody?.id === wb.id;
-            const icon = getPinIcon(wb.datasetType, wb.statusColor);
-            const isExtinct = wb.statusColor === 'grey' || wb.bhuvanWbis?.isExtinct;
-
-            return (
-              <g
-                key={wb.id}
-                className="cursor-pointer group"
-                onClick={() => handleSelectWaterBody(wb)}
-                onMouseEnter={() => setHoveredWaterBody(wb)}
-                onMouseLeave={() => setHoveredWaterBody(null)}
-              >
-                {/* Ripples */}
-                {wb.statusColor === 'red' ? (
-                  <circle cx={x} cy={y} className="danger-ring" stroke="#ef4444" fill="none" />
-                ) : isExtinct ? (
-                  <circle cx={x} cy={y} r="20" fill="none" stroke="#64748b" strokeWidth="1.5" strokeDasharray="3 3" opacity="0.7" />
-                ) : (
-                  <circle cx={x} cy={y} className="beacon-ring" stroke={style.fill} fill="none" />
-                )}
-
-                {/* Outer Selection Highlight Ring */}
-                {isSelected && (
-                  <circle cx={x} cy={y} r={22} fill="none" stroke={style.fill} strokeWidth="2.5" strokeDasharray="4 3" className="animate-spin-slow" />
-                )}
-
-                {/* Main Pin Circle Beacon */}
-                <circle
-                  cx={x}
-                  cy={y}
-                  r={isSelected ? 15 : isHovered ? 13 : 11}
-                  fill={style.fill}
-                  stroke="#ffffff"
-                  strokeWidth={isSelected ? 3.5 : 2.5}
-                  filter="drop-shadow(0 2px 5px rgba(0,0,0,0.3))"
-                  className="transition-all duration-200"
-                />
-
-                {/* Center Icon/Emoji */}
-                <text x={x} y={y + 3.5} fontSize="9.5" textAnchor="middle" className="select-none pointer-events-none">
-                  {icon}
-                </text>
-
-                {/* NDWI Spectral Score Pill beneath pin when Satellite Mode is active */}
-                {isNdwiSatelliteOverlayActive && (
-                  <g transform={`translate(${x}, ${y + (isSelected ? 20 : 15)})`} className="pointer-events-none">
-                    <rect
-                      x="-18"
-                      y="-5.5"
-                      width="36"
-                      height="11"
-                      rx="5.5"
-                      fill={isExtinct ? '#334155' : wb.statusColor === 'green' ? '#047857' : wb.statusColor === 'red' ? '#991b1b' : wb.statusColor === 'yellow' ? '#92400e' : '#0369a1'}
-                      opacity="0.95"
-                      stroke="#ffffff"
-                      strokeWidth="0.8"
-                    />
-                    <text x="0" y="2.8" fill="#ffffff" fontSize="7" fontWeight="bold" fontFamily="monospace" textAnchor="middle">
-                      {wb.bhuvanWbis?.ndwiScore !== undefined
-                        ? (wb.bhuvanWbis.ndwiScore > 0 ? `+${wb.bhuvanWbis.ndwiScore.toFixed(2)}` : wb.bhuvanWbis.ndwiScore.toFixed(2))
-                        : isExtinct ? '-0.28' : '+0.38'}
-                    </text>
-                  </g>
-                )}
-
-                {/* ZERO OVERLAPPING: Rich Label renders ONLY for Selected or Hovered pin! */}
-                {(isSelected || isHovered) && (
-                  <g transform={`translate(${x}, ${y - 24})`} className="pointer-events-none animate-in fade-in zoom-in-95 duration-150">
-                    <rect
-                      x={-(Math.max(wb.name.length, 32) * 3.6 + 26)}
-                      y="-30"
-                      width={Math.max(wb.name.length, 32) * 7.2 + 52}
-                      height="36"
-                      rx="14"
-                      fill={isSelected ? '#0f172a' : theme === 'light' ? 'rgba(255, 255, 255, 0.98)' : 'rgba(15, 23, 42, 0.96)'}
-                      stroke={isSelected ? style.fill : theme === 'light' ? '#0284c7' : '#38bdf8'}
-                      strokeWidth={isSelected ? '2.4' : '1.4'}
-                      filter="drop-shadow(0 4px 12px rgba(0,0,0,0.3))"
-                    />
-                    <text
-                      x="0"
-                      y="-15"
-                      fill={isSelected ? '#ffffff' : theme === 'light' ? '#0f172a' : '#ffffff'}
-                      fontSize="10.5"
-                      fontWeight="800"
-                      textAnchor="middle"
-                    >
-                      {wb.name.length > 42 ? wb.name.substring(0, 40) + '...' : wb.name}
-                    </text>
-                    <text
-                      x="0"
-                      y="-2"
-                      fill={isExtinct ? '#f87171' : wb.statusColor === 'red' ? '#f87171' : wb.statusColor === 'green' ? '#34d399' : wb.statusColor === 'yellow' ? '#fbbf24' : '#38bdf8'}
-                      fontSize="8.5"
-                      fontFamily="monospace"
-                      fontWeight="700"
-                      textAnchor="middle"
-                    >
-                      {wb.statusColor === 'grey' || isExtinct
-                        ? `⚪ 1. EXTINCT (Sookh Kar Mit Gaya) • NDWI: ${wb.bhuvanWbis?.ndwiScore ?? -0.28} • Details Niche Dekhein`
-                        : wb.statusColor === 'red'
-                        ? `🔴 2. DANGER ZONE (Critical Hazard) • TDS: ${wb.tdsPpm || 1240} ppm • Details Niche Dekhein`
-                        : wb.statusColor === 'green'
-                        ? `🟢 3. GOOD CONDITION (Bahut Achha) • Storage: ${wb.waterLevelPercent}% • Details Niche Dekhein`
-                        : wb.statusColor === 'yellow'
-                        ? `🟡 4. MEDIUM (Moderate Stress) • TDS: ${wb.tdsPpm || 680} ppm • Details Niche Dekhein`
-                        : `🔵 5. NORMAL (Active Telemetry) • Storage: ${wb.waterLevelPercent}% • Details Niche Dekhein`}
-                    </text>
-                  </g>
-                )}
-              </g>
-            );
-          })}
-        </svg>
-          </>
+          <AllDistrictsCombinedCadastralMapSvg
+            waterBodies={waterBodies}
+            activeWaterBody={activeWaterBody}
+            hoveredWaterBody={hoveredWaterBody}
+            onSelectWaterBody={handleSelectWaterBody}
+            viewFilter={viewFilter}
+            theme={theme}
+            showRivers={showVzmRivers}
+            onSwitchDistrict={(dist) => setSelectedDistrict(dist)}
+            onLodgeComplaint={onLodgeComplaint}
+          />
         )}
       </div>
 

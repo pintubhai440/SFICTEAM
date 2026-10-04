@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { WaterBody, WaterBodyStatusColor } from '../types/nirikshan';
 import { VISAKHAPATNAM_ALL_MANDAL_WATER_BODIES } from '../data/visakhapatnamMandalsWaterData';
 import { 
+  Plus,
+  Minus,
   ZoomIn, 
   ZoomOut, 
   RotateCcw,
@@ -481,28 +483,31 @@ export const VisakhapatnamCadastralMapSvg: React.FC<VisakhapatnamCadastralMapSvg
 
       {/* Directional Pad and Zoom Controls on Top-Right */}
       <div className="absolute top-3 right-3 z-20 flex flex-col items-end gap-1.5">
-        <div className="flex items-center gap-1 bg-white/95 backdrop-blur-md p-1 rounded-xl border border-slate-300 shadow-sm">
+        <div className="flex items-center gap-1.5 bg-white/95 backdrop-blur-md p-1.5 rounded-xl border border-slate-300 shadow-md">
           <button
             onClick={() => setZoomLevel(prev => Math.min(prev + 0.25, 3))}
-            title="Zoom In (Aage / Pass)"
-            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
+            title="प्लस पर क्लिक करके बड़ा करें (Zoom In +)"
+            className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer"
           >
-            <ZoomIn className="w-4 h-4" />
+            <Plus className="w-5 h-5 stroke-[2.5]" />
           </button>
+          <span className="text-[11px] font-mono font-bold text-slate-700 px-1 min-w-[36px] text-center select-none">
+            {Math.round(zoomLevel * 100)}%
+          </span>
           <button
             onClick={() => setZoomLevel(prev => Math.max(prev - 0.25, 0.65))}
-            title="Zoom Out (Piche / Door)"
-            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
+            title="माइनस पर क्लिक करके छोटा करें (Zoom Out -)"
+            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer"
           >
-            <ZoomOut className="w-4 h-4" />
+            <Minus className="w-5 h-5 stroke-[2.5]" />
           </button>
           <button
             onClick={() => {
               setZoomLevel(1);
               setPanOffset({ x: 0, y: 0 });
             }}
-            title="Reset View"
-            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
+            title="Reset View (100%)"
+            className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -565,7 +570,6 @@ export const VisakhapatnamCadastralMapSvg: React.FC<VisakhapatnamCadastralMapSvg
       <svg
         viewBox="0 0 1000 680"
         onMouseDown={handleMouseDown}
-        onWheel={handleWheel}
         className="w-full h-full cursor-grab active:cursor-grabbing"
       >
         <defs>

@@ -4,6 +4,8 @@ import { VIZIANAGARAM_ALL_MANDAL_WATER_BODIES } from '../data/vizianagaramMandal
 import { PARVATHIPURAM_ALL_MANDAL_WATER_BODIES } from '../data/parvathipuramMandalsWaterData';
 import { VISAKHAPATNAM_ALL_MANDAL_WATER_BODIES } from '../data/visakhapatnamMandalsWaterData';
 import { 
+  Plus,
+  Minus,
   ZoomIn, 
   ZoomOut, 
   RotateCcw,
@@ -751,22 +753,16 @@ export const AllDistrictsCombinedCadastralMapSvg: React.FC<AllDistrictsCombinedC
   onLodgeComplaint,
 }) => {
   const [hoveredMandal, setHoveredMandal] = useState<CombinedMandalNode | null>(null);
+  const [selectedMandal, setSelectedMandal] = useState<CombinedMandalNode | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [lastTouchDistance, setLastTouchDistance] = useState<number | null>(null);
   const svgContainerRef = useRef<HTMLDivElement>(null);
-
-  // Mouse Wheel Zoom
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const zoomFactor = e.deltaY < 0 ? 1.15 : 0.88;
-    setZoomLevel(prev => Math.max(0.6, Math.min(prev * zoomFactor, 3.5)));
-  };
 
   // Drag Panning Handlers (Aage-Piche, Upar-Neeche)
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Only drag on primary mouse button
     if (e.button !== 0) return;
     setIsDragging(true);
     setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
@@ -798,28 +794,101 @@ export const AllDistrictsCombinedCadastralMapSvg: React.FC<AllDistrictsCombinedC
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
-  // Directional Pan buttons (Aage, Piche, Upar, Neeche)
-  const panStep = 90;
+  // Touch Support (Pinch-to-zoom and Drag-pan on Mobile)
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      setIsDragging(true);
+      setDragStart({ x: e.touches[0].clientX - panOffset.x, y: e.touches[0].clientY - panOffset.y });
+      setLastTouchDistance(null);
+    } else if (e.touches.length === 2) {
+      setIsDragging(false);
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      setLastTouchDistance(Math.sqrt(dx * dx + dy * dy));
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 1 && isDragging) {
+      setPanOffset({
+        x: e.touches[0].clientX - dragStart.x,
+        y: e.touches[0].clientY - dragStart.y,
+      });
+    } else if (e.touches.length === 2 && lastTouchDistance !== null) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const currentDist = Math.sqrt(dx * dx + dy * dy);
+      const scale = currentDist / lastTouchDistance;
+      setZoomLevel(prev => Math.max(0.5, Math.min(prev * scale, 4.0)));
+      setLastTouchDistance(currentDist);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    setLastTouchDistance(null);
+  };
+
+  // Keyboard navigation support (Arrow keys, +, -, 0)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', '+', '-', '=', '0'].includes(e.key)) {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+        if (e.key === 'ArrowUp') panDirection('up');
+        else if (e.key === 'ArrowDown') panDirection('down');
+        else if (e.key === 'ArrowLeft') panDirection('left');
+        else if (e.key === 'ArrowRight') panDirection('right');
+        else if (e.key === '+' || e.key === '=') setZoomLevel(prev => Math.min(prev + 0.25, 4.0));
+        else if (e.key === '-') setZoomLevel(prev => Math.max(prev - 0.25, 0.5));
+        else if (e.key === '0') {
+          setZoomLevel(1);
+          setPanOffset({ x: 0, y: 0 });
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Directional Pan buttons (Aage / Piche / Upar / Neeche)
+  const panStep = 100;
   const panDirection = (dir: 'up' | 'down' | 'left' | 'right') => {
     setPanOffset(prev => {
       switch (dir) {
         case 'up': return { ...prev, y: prev.y + panStep };
         case 'down': return { ...prev, y: prev.y - panStep };
-        case 'left': return { ...prev, x: prev.x + panStep }; // move right to see left
-        case 'right': return { ...prev, x: prev.x - panStep }; // move left to see right
+        case 'left': return { ...prev, x: prev.x + panStep };
+        case 'right': return { ...prev, x: prev.x - panStep };
       }
     });
   };
 
+  // Quick District Focus Camera presets
+  const focusDistrict = (dist: 'Parvathipuram Manyam' | 'Vizianagaram' | 'Visakhapatnam' | 'all') => {
+    if (dist === 'Parvathipuram Manyam') {
+      setZoomLevel(1.55);
+      setPanOffset({ x: 20, y: 340 });
+    } else if (dist === 'Vizianagaram') {
+      setZoomLevel(1.35);
+      setPanOffset({ x: 0, y: 30 });
+    } else if (dist === 'Visakhapatnam') {
+      setZoomLevel(1.65);
+      setPanOffset({ x: -40, y: -420 });
+    } else {
+      setZoomLevel(1);
+      setPanOffset({ x: 0, y: 0 });
+    }
+  };
+
   const getMandalFill = (mandal: CombinedMandalNode) => {
-    const isSelected = activeWaterBody && (
+    const isSelected = (selectedMandal?.id === mandal.id) || (activeWaterBody && (
       activeWaterBody.name.toLowerCase().includes(mandal.name.toLowerCase()) ||
       activeWaterBody.mandal?.toLowerCase().includes(mandal.name.toLowerCase())
-    );
+    ));
     const isHovered = hoveredMandal?.id === mandal.id;
 
     if (isSelected) return '#bae6fd'; // Selected bright sky blue
-    if (isHovered) return '#fed7aa'; // Hover saffron
+    if (isHovered) return '#fed7aa'; // Hover saffron warm
 
     // 5-Color Filter Dimming
     if (viewFilter && viewFilter !== 'all') {
@@ -841,7 +910,9 @@ export const AllDistrictsCombinedCadastralMapSvg: React.FC<AllDistrictsCombinedC
     }
   };
 
-  const handleMandalClick = (mandal: CombinedMandalNode) => {
+  // Resolve telemetry object for HUD card
+  const getMandalTelemetry = (mandal: CombinedMandalNode | null): WaterBody | undefined => {
+    if (!mandal) return undefined;
     let targetWb: WaterBody | undefined;
     if (mandal.district === 'Parvathipuram Manyam') {
       targetWb = PARVATHIPURAM_ALL_MANDAL_WATER_BODIES[mandal.waterKey];
@@ -857,6 +928,12 @@ export const AllDistrictsCombinedCadastralMapSvg: React.FC<AllDistrictsCombinedC
         wb.mandal?.toLowerCase().includes(mandal.name.toLowerCase())
       );
     }
+    return targetWb;
+  };
+
+  const handleMandalClick = (mandal: CombinedMandalNode) => {
+    setSelectedMandal(mandal);
+    const targetWb = getMandalTelemetry(mandal);
 
     if (targetWb && onSelectWaterBody) {
       onSelectWaterBody(targetWb);
@@ -871,14 +948,19 @@ export const AllDistrictsCombinedCadastralMapSvg: React.FC<AllDistrictsCombinedC
     }, 60);
   };
 
+  const activeHudMandal = hoveredMandal || selectedMandal;
+  const activeHudTelemetry = getMandalTelemetry(activeHudMandal);
+
   return (
     <div 
       ref={svgContainerRef}
-      onWheel={handleWheel}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       className="relative w-full h-full select-none overflow-hidden rounded-2xl bg-[#f8fafc] cursor-grab active:cursor-grabbing"
     >
       {/* 5-Color Verified Condition Legend in Top-Left (Non-blocking) */}
-      <div className="absolute top-3 left-3 z-20 flex flex-wrap items-center gap-1.5 bg-white/95 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-slate-300 shadow-xs text-[11px] font-bold">
+      <div className="absolute top-3 left-3 z-20 flex flex-wrap items-center gap-1.5 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-300 shadow-sm text-[11px] font-bold">
         <span className="text-slate-500 font-mono uppercase text-[10px] mr-1 hidden sm:inline">3-District Grid:</span>
         <span className="flex items-center gap-1 text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
           <span className="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
@@ -904,29 +986,32 @@ export const AllDistrictsCombinedCadastralMapSvg: React.FC<AllDistrictsCombinedC
 
       {/* Interactive Navigation Compass / Directional Pan & Zoom Pad (Aage-Piche, Upar-Neeche) */}
       <div className="absolute top-3 right-3 z-20 flex flex-col items-end gap-2">
-        {/* Zoom & Quick Reset */}
-        <div className="flex items-center gap-1 bg-white/95 backdrop-blur-md p-1 rounded-xl border border-slate-300 shadow-sm">
+        {/* Zoom Controls: Click Plus (+) to Enlarge, Minus (-) to Shrink, Reset */}
+        <div className="flex items-center gap-1.5 bg-white/95 backdrop-blur-md p-1.5 rounded-xl border border-slate-300 shadow-md">
           <button
-            onClick={() => setZoomLevel(prev => Math.min(prev + 0.25, 3.5))}
-            title="Zoom In (Aage / Pass)"
-            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-700 font-bold transition-colors cursor-pointer"
+            onClick={() => setZoomLevel(prev => Math.min(prev + 0.25, 4.0))}
+            title="प्लस पर क्लिक करके बड़ा करें (Zoom In +)"
+            className="p-1.5 sm:p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center shadow-xs"
           >
-            <ZoomIn className="w-4 h-4" />
+            <Plus className="w-5 h-5 stroke-[2.5]" />
           </button>
+          <span className="text-[11px] font-mono font-bold text-slate-700 px-1 min-w-[38px] text-center select-none">
+            {Math.round(zoomLevel * 100)}%
+          </span>
           <button
-            onClick={() => setZoomLevel(prev => Math.max(prev - 0.25, 0.6))}
-            title="Zoom Out (Piche / Door)"
-            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-700 font-bold transition-colors cursor-pointer"
+            onClick={() => setZoomLevel(prev => Math.max(prev - 0.25, 0.5))}
+            title="माइनस पर क्लिक करके छोटा करें (Zoom Out -)"
+            className="p-1.5 sm:p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center shadow-xs"
           >
-            <ZoomOut className="w-4 h-4" />
+            <Minus className="w-5 h-5 stroke-[2.5]" />
           </button>
           <button
             onClick={() => {
               setZoomLevel(1);
               setPanOffset({ x: 0, y: 0 });
             }}
-            title="Reset Map View"
-            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-700 font-bold transition-colors cursor-pointer"
+            title="Reset Map View (सामान्य दृश्य 100%)"
+            className="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -934,24 +1019,24 @@ export const AllDistrictsCombinedCadastralMapSvg: React.FC<AllDistrictsCombinedC
 
         {/* Directional Navigation Pad (Aage / Piche / Upar / Neeche) */}
         <div className="bg-white/95 backdrop-blur-md p-1.5 rounded-xl border border-slate-300 shadow-sm flex flex-col items-center gap-1">
-          <span className="text-[9px] font-mono text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1">
+          <span className="text-[9px] font-mono text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1">
             <Move className="w-3 h-3 text-sky-600" />
-            <span>Pan Map</span>
+            <span>Pan (आगे-पीछे)</span>
           </span>
           <div className="grid grid-cols-3 gap-1">
             <div></div>
             <button
               onClick={() => panDirection('up')}
-              title="Pan Up (Upar)"
-              className="p-1 rounded-md bg-slate-100 hover:bg-sky-100 text-slate-700 hover:text-sky-700 transition-colors"
+              title="Pan Up (ऊपर / North Hills)"
+              className="p-1.5 rounded-md bg-slate-100 hover:bg-sky-100 text-slate-700 hover:text-sky-700 transition-colors cursor-pointer"
             >
               <ArrowUp className="w-3.5 h-3.5" />
             </button>
             <div></div>
             <button
               onClick={() => panDirection('left')}
-              title="Pan Left (Piche / Baye)"
-              className="p-1 rounded-md bg-slate-100 hover:bg-sky-100 text-slate-700 hover:text-sky-700 transition-colors"
+              title="Pan Left (पीछे / West Inland)"
+              className="p-1.5 rounded-md bg-slate-100 hover:bg-sky-100 text-slate-700 hover:text-sky-700 transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
             </button>
@@ -960,23 +1045,23 @@ export const AllDistrictsCombinedCadastralMapSvg: React.FC<AllDistrictsCombinedC
                 setZoomLevel(1);
                 setPanOffset({ x: 0, y: 0 });
               }}
-              title="Center"
-              className="p-1 rounded-md bg-slate-200 text-slate-800 text-[9px] font-bold"
+              title="Center Map"
+              className="p-1.5 rounded-md bg-slate-200 text-slate-800 text-[9px] font-bold cursor-pointer"
             >
               •
             </button>
             <button
               onClick={() => panDirection('right')}
-              title="Pan Right (Aage / Daye)"
-              className="p-1 rounded-md bg-slate-100 hover:bg-sky-100 text-slate-700 hover:text-sky-700 transition-colors"
+              title="Pan Right (आगे / East Coast)"
+              className="p-1.5 rounded-md bg-slate-100 hover:bg-sky-100 text-slate-700 hover:text-sky-700 transition-colors cursor-pointer"
             >
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
             <div></div>
             <button
               onClick={() => panDirection('down')}
-              title="Pan Down (Neeche)"
-              className="p-1 rounded-md bg-slate-100 hover:bg-sky-100 text-slate-700 hover:text-sky-700 transition-colors"
+              title="Pan Down (नीचे / South Coast)"
+              className="p-1.5 rounded-md bg-slate-100 hover:bg-sky-100 text-slate-700 hover:text-sky-700 transition-colors cursor-pointer"
             >
               <ArrowDown className="w-3.5 h-3.5" />
             </button>
@@ -984,33 +1069,140 @@ export const AllDistrictsCombinedCadastralMapSvg: React.FC<AllDistrictsCombinedC
           </div>
         </div>
 
-        {/* Quick Focus District Buttons */}
+        {/* Quick Focus District Buttons with Instant Camera Alignment */}
         <div className="flex flex-col gap-1 bg-white/95 backdrop-blur-md p-1.5 rounded-xl border border-slate-300 shadow-sm text-[10px] font-bold">
-          <span className="text-[9px] text-slate-400 font-mono">Zoom to District:</span>
+          <span className="text-[9px] text-slate-400 font-mono">Zoom District (फोकस):</span>
           <button
-            onClick={() => onSwitchDistrict && onSwitchDistrict('Parvathipuram Manyam')}
-            className="px-2 py-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-left transition-colors cursor-pointer"
+            onClick={() => focusDistrict('Parvathipuram Manyam')}
+            className="px-2 py-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-left transition-colors cursor-pointer flex items-center justify-between gap-1"
           >
-            🏔️ Parvathipuram
+            <span>🏔️ Parvathipuram</span>
+            <span className="text-[9px] text-emerald-600 font-mono">15 M</span>
           </button>
           <button
-            onClick={() => onSwitchDistrict && onSwitchDistrict('Vizianagaram')}
-            className="px-2 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-left transition-colors cursor-pointer"
+            onClick={() => focusDistrict('Vizianagaram')}
+            className="px-2 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-left transition-colors cursor-pointer flex items-center justify-between gap-1"
           >
-            🌾 Vizianagaram
+            <span>🌾 Vizianagaram</span>
+            <span className="text-[9px] text-amber-600 font-mono">28 M</span>
           </button>
           <button
-            onClick={() => onSwitchDistrict && onSwitchDistrict('Visakhapatnam')}
-            className="px-2 py-1 rounded bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 text-left transition-colors cursor-pointer"
+            onClick={() => focusDistrict('Visakhapatnam')}
+            className="px-2 py-1 rounded bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 text-left transition-colors cursor-pointer flex items-center justify-between gap-1"
           >
-            🌊 Visakhapatnam
+            <span>🌊 Visakhapatnam</span>
+            <span className="text-[9px] text-sky-600 font-mono">11 M</span>
+          </button>
+          <button
+            onClick={() => focusDistrict('all')}
+            className="px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 text-left transition-colors cursor-pointer text-center font-bold"
+          >
+            🌐 All 3 Districts (54 M)
           </button>
         </div>
       </div>
 
-      {/* SVG Canvas with Unified 3-District Geometry */}
+      {/* Floating Interactive Mandal Telemetry HUD Card (Sab Data Map me Rahega) */}
+      {activeHudMandal && (
+        <div className="absolute bottom-4 left-4 z-20 max-w-sm sm:max-w-md bg-white/95 backdrop-blur-md p-3.5 rounded-2xl border border-slate-300 shadow-xl space-y-2 pointer-events-auto">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                  activeHudMandal.district === 'Parvathipuram Manyam' ? 'bg-emerald-100 text-emerald-800' :
+                  activeHudMandal.district === 'Vizianagaram' ? 'bg-amber-100 text-amber-800' :
+                  'bg-sky-100 text-sky-800'
+                }`}>
+                  {activeHudMandal.district}
+                </span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 ${
+                  activeHudMandal.statusColor === 'green' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                  activeHudMandal.statusColor === 'blue' ? 'bg-sky-50 text-sky-700 border border-sky-200' :
+                  activeHudMandal.statusColor === 'yellow' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                  activeHudMandal.statusColor === 'red' ? 'bg-rose-50 text-rose-700 border border-rose-200 animate-pulse' :
+                  'bg-slate-100 text-slate-700 border border-slate-200'
+                }`}>
+                  <span className={`w-2 h-2 rounded-full ${
+                    activeHudMandal.statusColor === 'green' ? 'bg-emerald-500' :
+                    activeHudMandal.statusColor === 'blue' ? 'bg-sky-500' :
+                    activeHudMandal.statusColor === 'yellow' ? 'bg-amber-500' :
+                    activeHudMandal.statusColor === 'red' ? 'bg-rose-500' : 'bg-slate-500'
+                  }`}></span>
+                  <span>{activeHudMandal.statusLabel.split('(')[0]}</span>
+                </span>
+              </div>
+              <h4 className="text-sm sm:text-base font-extrabold text-slate-900 mt-1">
+                {activeHudMandal.name} Mandal ({activeHudMandal.teluguName})
+              </h4>
+              <p className="text-xs text-slate-600 font-medium line-clamp-1">
+                💧 {activeHudTelemetry?.name || activeHudMandal.primaryWaterBody}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setHoveredMandal(null);
+                setSelectedMandal(null);
+              }}
+              className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Quick Telemetry Indicators Grid */}
+          <div className="grid grid-cols-3 gap-1.5 pt-1 text-[11px] font-mono">
+            <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+              <span className="text-[9px] text-slate-400 block font-sans">Storage / Level</span>
+              <span className="font-bold text-sky-700">
+                {activeHudTelemetry?.waterLevelPercent ? `${activeHudTelemetry.waterLevelPercent}%` : 'Normal'}
+              </span>
+            </div>
+            <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+              <span className="text-[9px] text-slate-400 block font-sans">Water TDS</span>
+              <span className={`font-bold ${
+                (activeHudTelemetry?.tdsPpm || 250) > 800 ? 'text-rose-600' : 'text-emerald-700'
+              }`}>
+                {activeHudTelemetry?.tdsPpm || 280} ppm
+              </span>
+            </div>
+            <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+              <span className="text-[9px] text-slate-400 block font-sans">Water Bodies</span>
+              <span className="font-bold text-slate-700">
+                {activeHudMandal.waterBodiesCount} Detected
+              </span>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              onClick={() => {
+                if (activeHudTelemetry && onSelectWaterBody) {
+                  onSelectWaterBody(activeHudTelemetry);
+                }
+                const el = document.getElementById('apwrims-dossier');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              }}
+              className="flex-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold text-center transition-colors cursor-pointer"
+            >
+              Inspect Telemetry Dossier (వివరాలు)
+            </button>
+            {onLodgeComplaint && (
+              <button
+                onClick={onLodgeComplaint}
+                className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+              >
+                Lodge Complain
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* SVG Canvas with Unified 3-District Geometry (Centered Zoom & Pan) */}
       <svg
         viewBox="0 0 1150 1180"
+        preserveAspectRatio="xMidYMid meet"
         onMouseDown={handleMouseDown}
         className="w-full h-full"
       >
@@ -1035,88 +1227,88 @@ export const AllDistrictsCombinedCadastralMapSvg: React.FC<AllDistrictsCombinedC
         <rect width="1150" height="1180" fill="#f8fafc" />
         <rect width="1150" height="1180" fill="url(#combined-grid)" />
 
-        {/* ============================================================== */}
-        {/* BAY OF BENGAL MARITIME SHELF (EASTERN SHORELINE)              */}
-        {/* ============================================================== */}
-        <g id="combined-bay-of-bengal" className="select-none">
-          <path
-            d="M 940,355 Q 890,520 745,715 T 780,830 Q 670,965 610,1045 T 450,1130 L 1150,1180 L 1150,300 Z"
-            fill="url(#all-sea-gradient)"
-          />
-
-          {/* Animated Coastal Waves */}
-          <path
-            d="M 950,365 Q 900,530 755,725 T 790,840 Q 680,975 620,1055 T 460,1140"
-            fill="none"
-            stroke="#0284c7"
-            strokeWidth="2.5"
-            strokeDasharray="10 8"
-            opacity="0.6"
-          >
-            <animate attributeName="stroke-dashoffset" values="0;36" dur="4s" repeatCount="indefinite" />
-          </path>
-
-          <text
-            x="960"
-            y="720"
-            fill="#0369a1"
-            fontSize="22"
-            fontWeight="bold"
-            letterSpacing="4"
-            className="pointer-events-none select-none font-serif opacity-80"
-            transform="rotate(72, 960, 720)"
-          >
-            BAY OF BENGAL (బంగాళాఖాతం) 🌊
-          </text>
-          <text
-            x="990"
-            y="745"
-            fill="#0284c7"
-            fontSize="12"
-            fontStyle="italic"
-            className="pointer-events-none select-none opacity-80"
-            transform="rotate(72, 990, 745)"
-          >
-            North Andhra Coastline • Srikakulam → Pusapatirega → Bheemili → Visakhapatnam Port
-          </text>
-        </g>
-
-        {/* Dynamic Zoom & Pan Transform Layer */}
-        <g transform={`translate(${panOffset.x}, ${panOffset.y}) scale(${zoomLevel})`}>
+        {/* Dynamic Zoom & Pan Transform Layer with Center Scaling (All Elements Move Together Seamlessly) */}
+        <g transform={`translate(${panOffset.x}, ${panOffset.y}) translate(575, 590) scale(${zoomLevel}) translate(-575, -590)`}>
           
           {/* ============================================================== */}
-          {/* DISTRICT HEADER BANNERS (GEOGRAPHIC REGION IDENTIFIERS)        */}
+          {/* BAY OF BENGAL MARITIME SHELF (SYNCHRONIZED WITH DRAG & ZOOM)  */}
+          {/* ============================================================== */}
+          <g id="combined-bay-of-bengal" className="select-none">
+            <path
+              d="M 940,355 Q 890,520 745,715 T 780,830 Q 670,965 610,1045 T 450,1130 L 1150,1180 L 1150,300 Z"
+              fill="url(#all-sea-gradient)"
+            />
+
+            {/* Animated Coastal Waves */}
+            <path
+              d="M 950,365 Q 900,530 755,725 T 790,840 Q 680,975 620,1055 T 460,1140"
+              fill="none"
+              stroke="#0284c7"
+              strokeWidth="2.5"
+              strokeDasharray="10 8"
+              opacity="0.6"
+            >
+              <animate attributeName="stroke-dashoffset" values="0;36" dur="4s" repeatCount="indefinite" />
+            </path>
+
+            <text
+              x="960"
+              y="720"
+              fill="#0369a1"
+              fontSize="22"
+              fontWeight="bold"
+              letterSpacing="4"
+              className="pointer-events-none select-none font-serif opacity-80"
+              transform="rotate(72, 960, 720)"
+            >
+              BAY OF BENGAL (బంగాళాఖాతం) 🌊
+            </text>
+            <text
+              x="990"
+              y="745"
+              fill="#0284c7"
+              fontSize="12"
+              fontStyle="italic"
+              className="pointer-events-none select-none opacity-80"
+              transform="rotate(72, 990, 745)"
+            >
+              North Andhra Coastline • Srikakulam → Pusapatirega → Bheemili → Visakhapatnam Port
+            </text>
+          </g>
+
+          {/* ============================================================== */}
+          {/* DISTRICT HEADER BANNERS (PROMINENT ZONE IDENTIFIERS)           */}
           {/* ============================================================== */}
           {/* 1. Parvathipuram Manyam Banner */}
           <g 
             className="cursor-pointer group"
-            onClick={() => onSwitchDistrict && onSwitchDistrict('Parvathipuram Manyam')}
+            onClick={() => focusDistrict('Parvathipuram Manyam')}
           >
-            <rect x="220" y="30" width="460" height="34" rx="8" fill="#dcfce7" stroke="#16a34a" strokeWidth="1.5" opacity="0.9" />
-            <text x="450" y="52" fill="#15803d" fontSize="13" fontWeight="bold" textAnchor="middle" className="select-none group-hover:underline">
-              ▲ 1. PARVATHIPURAM MANYAM DISTRICT (15 Mandals • Agency Hills & Dams)
+            <rect x="220" y="30" width="480" height="34" rx="8" fill="#dcfce7" stroke="#16a34a" strokeWidth="1.5" opacity="0.95" />
+            <text x="460" y="52" fill="#15803d" fontSize="13" fontWeight="bold" textAnchor="middle" className="select-none group-hover:underline">
+              ▲ 1. PARVATHIPURAM MANYAM DISTRICT (15 Mandals • Agency Catchments & Dams)
             </text>
           </g>
 
           {/* 2. Vizianagaram Banner */}
           <g 
             className="cursor-pointer group"
-            onClick={() => onSwitchDistrict && onSwitchDistrict('Vizianagaram')}
+            onClick={() => focusDistrict('Vizianagaram')}
           >
-            <rect x="260" y="520" width="130" height="28" rx="6" fill="#fef3c7" stroke="#d97706" strokeWidth="1.2" opacity="0.95" />
-            <text x="325" y="538" fill="#92400e" fontSize="10.5" fontWeight="bold" textAnchor="middle" className="select-none group-hover:underline">
-              🌾 2. VIZIANAGARAM
+            <rect x="230" y="475" width="220" height="30" rx="7" fill="#fef3c7" stroke="#d97706" strokeWidth="1.3" opacity="0.95" />
+            <text x="340" y="495" fill="#92400e" fontSize="11" fontWeight="bold" textAnchor="middle" className="select-none group-hover:underline">
+              🌾 2. VIZIANAGARAM (28 Mandals)
             </text>
           </g>
 
           {/* 3. Visakhapatnam Banner */}
           <g 
             className="cursor-pointer group"
-            onClick={() => onSwitchDistrict && onSwitchDistrict('Visakhapatnam')}
+            onClick={() => focusDistrict('Visakhapatnam')}
           >
-            <rect x="240" y="870" width="130" height="28" rx="6" fill="#dbeafe" stroke="#2563eb" strokeWidth="1.2" opacity="0.95" />
-            <text x="305" y="888" fill="#1e40af" fontSize="10.5" fontWeight="bold" textAnchor="middle" className="select-none group-hover:underline">
-              🌊 3. VISAKHAPATNAM
+            <rect x="210" y="855" width="230" height="30" rx="7" fill="#dbeafe" stroke="#2563eb" strokeWidth="1.3" opacity="0.95" />
+            <text x="325" y="875" fill="#1e40af" fontSize="11" fontWeight="bold" textAnchor="middle" className="select-none group-hover:underline">
+              🌊 3. VISAKHAPATNAM (11 Mandals)
             </text>
           </g>
 
