@@ -390,6 +390,6 @@ export function generateWatershedPdfReport(watershed: MicroWatershed) {
   doc.text('Gram Panchayat Attestation: __________________________', margin + 85, y + 19);
 
   // Save the PDF
-  const filename = `JalDrishti_AuditReport_${watershed.code}_${now.toISOString().slice(0, 10)}.pdf`;
+  const filename = `Nir-ikshan_AuditReport_${watershed.code}_${now.toISOString().slice(0, 10)}.pdf`;
   doc.save(filename);
 }

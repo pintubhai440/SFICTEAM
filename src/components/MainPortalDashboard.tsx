@@ -6,17 +6,11 @@ import {
   ShieldCheck, 
   User, 
   Building2, 
-  UserCheck, 
-  Wrench, 
   AlertTriangle, 
-  Phone, 
   Activity, 
-  TrendingUp, 
   CheckCircle2, 
-  Layers, 
-  ArrowRight,
-  ExternalLink,
-  Sparkles
+  Sparkles,
+  ArrowRight
 } from 'lucide-react';
 
 interface MainPortalDashboardProps {
@@ -53,47 +47,68 @@ export const MainPortalDashboard: React.FC<MainPortalDashboardProps> = ({
             <span>NATIONAL WATER INTEGRITY & SURVEILLANCE ECOSYSTEM</span>
           </div>
 
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
-            Nir-ikshan: National & Andhra Pradesh Water Accountability Command
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight leading-tight">
+            Nir-ikshan: National Micro-Watershed Grid & Hydrological Surveillance
           </h2>
 
-          <p className="text-xs sm:text-sm text-sky-200/90 leading-relaxed font-normal">
-            Real-time geospatial hydrological surveillance across India and deep micro-watershed monitoring in <strong>Vizianagaram</strong> & <strong>Parvathipuram Manyam</strong>. Select your role above to access citizen grievance lodging, district triage, field inspector telemetry, or engineering remediation.
+          <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-normal">
+            Real-time geospatial monitoring, citizen grievance triage, and satellite verification engine. Powered by <strong>ISRO-Bhuvan WBIS Optical Passes</strong>, <strong>India-WRIS / APWRIMS Telemetry</strong>, and verifiable algorithmic water accountability across India.
           </p>
+
+          <div className="flex flex-wrap items-center gap-3 pt-2 text-xs">
+            <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-lg font-bold flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>ISRO-Bhuvan WBIS Integrated</span>
+            </span>
+            <span className="bg-sky-500/20 text-sky-300 border border-sky-500/30 px-3 py-1 rounded-lg font-bold flex items-center gap-1.5">
+              <Droplets className="w-3.5 h-3.5" />
+              <span>India-WRIS / APWRIMS Synced</span>
+            </span>
+            <span className="bg-purple-500/20 text-purple-300 border border-purple-500/30 px-3 py-1 rounded-lg font-bold flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>SFIC Theme 2 Water Security</span>
+            </span>
+          </div>
         </div>
 
-        {/* Quick Action Badges */}
-        <div className="flex flex-col sm:flex-row lg:flex-col items-stretch gap-2.5 w-full lg:w-auto relative z-10 shrink-0">
+        {/* Quick Portal Switch Actions */}
+        <div className="flex flex-col sm:flex-row lg:flex-col gap-2.5 w-full sm:w-auto shrink-0 relative z-10">
           <button
             onClick={() => onSelectRole('user')}
-            className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl text-xs sm:text-sm shadow-md shadow-emerald-900/30 flex items-center justify-center gap-2 transition-all hover:scale-102 active:scale-98 cursor-pointer"
+            className="w-full px-5 py-3 rounded-2xl bg-white hover:bg-slate-100 text-[#0047ab] font-bold text-xs sm:text-sm shadow-md flex items-center justify-between gap-3 transition-transform active:scale-95 cursor-pointer"
           >
-            <User className="w-4 h-4" />
-            <span>Open Citizen Portal (User Data)</span>
+            <div className="flex items-center gap-2">
+              <User className="w-4 h-4 text-blue-600" />
+              <span>Citizen Surveillance Portal</span>
+            </div>
+            <ArrowRight className="w-4 h-4" />
           </button>
 
           <button
-            onClick={onOpenLodgeModal}
-            className="px-5 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-2xl text-xs sm:text-sm shadow-md shadow-rose-900/30 flex items-center justify-center gap-2 transition-all hover:scale-102 active:scale-98 cursor-pointer animate-pulse"
+            onClick={() => onSelectRole('admin')}
+            className="w-full px-5 py-3 rounded-2xl bg-blue-600/90 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm border border-blue-400/30 shadow-md flex items-center justify-between gap-3 transition-transform active:scale-95 cursor-pointer"
           >
-            <AlertTriangle className="w-4 h-4" />
-            <span>Lodge Complain (शिकायत दर्ज करें)</span>
+            <div className="flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-sky-300" />
+              <span>State Admin Command (AP Grid)</span>
+            </div>
+            <ArrowRight className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* 5-Color KPI Health Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      {/* 5-Color Health Overview Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5">
         {/* Green */}
         <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider">
-              🟢 BAHUT ACHHA
+              🟢 PRISTINE / RECHARGED
             </span>
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
           </div>
           <div className="text-2xl sm:text-3xl font-extrabold text-emerald-900 mt-1">{greenCount}</div>
-          <p className="text-[11px] text-emerald-700 mt-0.5 font-medium">Pristine / High Flow</p>
+          <p className="text-[11px] text-emerald-700 mt-0.5 font-medium">Recharge Abundant</p>
         </div>
 
         {/* Blue */}
@@ -145,13 +160,34 @@ export const MainPortalDashboard: React.FC<MainPortalDashboardProps> = ({
         </div>
       </div>
 
-      {/* Main Interactive All-India Map */}
-      <InteractiveIndiaMap
-        waterBodies={waterBodies}
-        complaints={complaints}
-        currentRole="admin"
-        onLodgeComplaint={onOpenLodgeModal}
-      />
+      {/* PRIMARY MAP: ALL-INDIA NATIONAL WATER GRID (ORIGINAL DEFAULT AS REQUESTED) */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
+          <div>
+            <h3 className="font-extrabold text-slate-900 text-base sm:text-lg flex items-center gap-2">
+              <span>🇮🇳 National Water Grid & River Basins of India</span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Comprehensive micro-watershed surveillance and satellite optical coverage across India.
+            </p>
+          </div>
+
+          <button
+            onClick={() => onSelectRole('admin')}
+            className="px-4 py-2 bg-gradient-to-r from-[#0047ab] to-sky-600 hover:from-blue-700 hover:to-sky-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+          >
+            <span>Open Andhra Pradesh State Command</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <InteractiveIndiaMap
+          waterBodies={waterBodies}
+          complaints={complaints}
+          currentRole="admin"
+          onLodgeComplaint={onOpenLodgeModal}
+        />
+      </div>
 
       {/* Regional Catchment Inventory Table */}
       <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
@@ -185,47 +221,39 @@ export const MainPortalDashboard: React.FC<MainPortalDashboardProps> = ({
                 <tr key={wb.id} className="hover:bg-slate-50/80 transition-colors">
                   <td className="p-3">
                     <div className="font-bold text-slate-900">{wb.name}</div>
-                    {wb.teluguName && (
-                      <div className="text-[10px] text-[#0047ab] font-bold">{wb.teluguName}</div>
-                    )}
+                    <div className="text-[10px] text-slate-400 font-mono">
+                      {wb.coordinates.lat}°N, {wb.coordinates.lng}°E
+                    </div>
                   </td>
                   <td className="p-3">
-                    <span className="font-semibold text-slate-800">{wb.state || 'Andhra Pradesh'}</span>
-                    <div className="text-[10px] text-slate-500">{wb.district}</div>
+                    <span className="font-semibold text-slate-800">{wb.district}</span>
+                    <span className="text-[11px] text-slate-500 block">{wb.mandal}</span>
                   </td>
-                  <td className="p-3">
-                    <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px]">
-                      {wb.type}
+                  <td className="p-3 font-mono text-[11px]">{wb.type}</td>
+                  <td className="p-3 font-mono font-bold text-[#0047ab]">
+                    {wb.waterLevelPercent}%
+                  </td>
+                  <td className="p-3 font-mono">
+                    <span className={wb.tdsPpm > 500 ? 'text-rose-600 font-bold' : 'text-emerald-700'}>
+                      {wb.tdsPpm} ppm
                     </span>
                   </td>
                   <td className="p-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-16 bg-slate-200 rounded-full h-1.5 overflow-hidden">
-                        <div
-                          className="bg-blue-600 h-1.5 rounded-full"
-                          style={{ width: `${wb.waterLevelPercent}%` }}
-                        ></div>
-                      </div>
-                      <span className="font-bold">{wb.waterLevelPercent}%</span>
-                    </div>
-                  </td>
-                  <td className="p-3 font-mono font-bold text-slate-800">
-                    {wb.tdsPpm} ppm
-                  </td>
-                  <td className="p-3">
-                    <span className="text-[11px] text-slate-600">{wb.wasteLevel}</span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      wb.wasteLevel === 'Heavy' ? 'bg-rose-100 text-rose-800' :
+                      wb.wasteLevel === 'Moderate' ? 'bg-amber-100 text-amber-800' :
+                      'bg-slate-100 text-slate-600'
+                    }`}>
+                      {wb.wasteLevel}
+                    </span>
                   </td>
                   <td className="p-3 text-right">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                      wb.statusColor === 'green'
-                        ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                        : wb.statusColor === 'blue'
-                        ? 'bg-sky-100 text-sky-800 border-sky-300'
-                        : wb.statusColor === 'yellow'
-                        ? 'bg-amber-100 text-amber-800 border-amber-300'
-                        : wb.statusColor === 'red'
-                        ? 'bg-rose-100 text-rose-800 border-rose-300'
-                        : 'bg-slate-200 text-slate-800 border-slate-300'
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold ${
+                      wb.statusColor === 'green' ? 'bg-emerald-100 text-emerald-800' :
+                      wb.statusColor === 'blue' ? 'bg-sky-100 text-sky-800' :
+                      wb.statusColor === 'yellow' ? 'bg-amber-100 text-amber-800' :
+                      wb.statusColor === 'red' ? 'bg-rose-100 text-rose-800' :
+                      'bg-slate-200 text-slate-700'
                     }`}>
                       {wb.statusColor.toUpperCase()}
                     </span>

@@ -35,6 +35,8 @@ import {
   Calendar
 } from 'lucide-react';
 import { BhuvanWbisDetailModal } from './BhuvanWbisDetailModal';
+import { VizianagaramCadastralMapSvg, VizianagaramMandalData } from './VizianagaramCadastralMapSvg';
+import { VIZIANAGARAM_ALL_MANDAL_WATER_BODIES } from '../data/vizianagaramMandalsWaterData';
 
 interface InteractiveAndhraMapProps {
   waterBodies: WaterBody[];
@@ -92,6 +94,42 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
     return waterBodies.find(wb => wb.district === 'Vizianagaram') || waterBodies[0] || null;
   });
   const [hoveredWaterBody, setHoveredWaterBody] = useState<WaterBody | null>(null);
+
+  // Vizianagaram Cadastral Map state & layer controls (100% Water-focused)
+  const [selectedMandalId, setSelectedMandalId] = useState<string | null>(null);
+  const [showVzmRivers, setShowVzmRivers] = useState<boolean>(true);
+  const [showVzmTanks, setShowVzmTanks] = useState<boolean>(true);
+  const [showVzmSensors, setShowVzmSensors] = useState<boolean>(true);
+
+  // Guarantee that all 28 Mandals of Vizianagaram have rich, active water bodies
+  const allAvailableWaterBodies = React.useMemo(() => {
+    const existingIds = new Set(waterBodies.map(w => w.id));
+    const merged = [...waterBodies];
+    Object.values(VIZIANAGARAM_ALL_MANDAL_WATER_BODIES).forEach(mandalWb => {
+      if (!existingIds.has(mandalWb.id)) {
+        merged.push(mandalWb);
+      }
+    });
+    return merged;
+  }, [waterBodies]);
+
+  const handleSelectMandal = (mandal: VizianagaramMandalData) => {
+    setSelectedMandalId(mandal.id);
+    // 1. Direct mandal id lookup (100% reliable)
+    const directWb = VIZIANAGARAM_ALL_MANDAL_WATER_BODIES[mandal.id];
+    // 2. Search in allAvailableWaterBodies as fallback
+    const targetWb = directWb || allAvailableWaterBodies.find(wb => 
+      wb.mandal && (
+        wb.mandal.toLowerCase().includes(mandal.name.toLowerCase()) || 
+        mandal.name.toLowerCase().includes(wb.mandal.toLowerCase()) ||
+        wb.village?.toLowerCase().includes(mandal.name.toLowerCase())
+      )
+    );
+    if (targetWb) {
+      setActiveWaterBody(targetWb);
+      if (onSelectWaterBody) onSelectWaterBody(targetWb);
+    }
+  };
 
   // Live India WRIS state
   const [liveTelemetry, setLiveTelemetry] = useState<any>(null);
@@ -170,7 +208,7 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
   };
 
   // Filter based on district, video filter (all/alerts/active/extinct), and dataset tab (all/9 endpoints)
-  const filteredWaterBodies = waterBodies.filter((wb) => {
+  const filteredWaterBodies = allAvailableWaterBodies.filter((wb) => {
     if (wb.state && wb.state !== 'Andhra Pradesh') return false;
     const matchesDistrict = effectiveDistrict === 'all' || wb.district === effectiveDistrict;
     if (!matchesDistrict) return false;
@@ -196,7 +234,7 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
     return true;
   });
 
-  const districtWaterBodies = waterBodies.filter(w => effectiveDistrict === 'all' || w.district === effectiveDistrict);
+  const districtWaterBodies = allAvailableWaterBodies.filter(w => effectiveDistrict === 'all' || w.district === effectiveDistrict);
   const alertCount = districtWaterBodies.filter(wb => wb.statusColor === 'red' || wb.statusColor === 'yellow').length;
   const activeCount = districtWaterBodies.filter(wb => wb.statusColor === 'blue' || wb.statusColor === 'green').length;
   const extinctCount = districtWaterBodies.filter(wb => wb.statusColor === 'grey' || wb.bhuvanWbis?.isExtinct).length;
@@ -340,14 +378,16 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 flex-wrap">
-              <span>National Water Informatics Centre Surveillance Grid</span>
+              <span>{effectiveDistrict === 'Vizianagaram' ? 'Vizianagaram District Water Surveillance Map (విజయనగరం జల పర్యవేక్షణ)' : 'National Water Informatics Centre Surveillance Grid'}</span>
               <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-blue-50 text-[#0047ab] border border-blue-200">
                 {effectiveDistrict === 'all' ? 'ALL 3 DISTRICTS' : effectiveDistrict.toUpperCase()}
               </span>
             </h3>
           </div>
           <p className="text-[11px] text-slate-500 font-medium">
-            Direct telemetry from India-WRIS OpenAPI 3.0 across Vizianagaram, Parvathipuram & Visakhapatnam
+            {effectiveDistrict === 'Vizianagaram' 
+              ? '28 Mandals Hydrological & Satellite Surveillance • Click any Mandal, Water Body or River for live data' 
+              : 'Direct telemetry from India-WRIS OpenAPI 3.0 across Vizianagaram, Parvathipuram & Visakhapatnam'}
           </p>
         </div>
 
@@ -485,134 +525,136 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
       {/* ============================================================== */}
       {/* 2. ALL 9 INDIA-WRIS ENDPOINTS INTERACTIVE LAYER FILTER BAR      */}
       {/* ============================================================== */}
-      <div className="bg-slate-900 border-b border-slate-800 p-2.5 px-3 sm:px-4 text-xs overflow-x-auto select-none">
-        <div className="flex items-center gap-1.5 min-w-max">
-          <span className="text-[10px] font-mono text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1 mr-1">
-            <Filter className="w-3 h-3 text-sky-400" />
-            <span>Telemetry Layer:</span>
-          </span>
+      {currentRole !== 'user' && effectiveDistrict !== 'Vizianagaram' && (
+        <div className="bg-slate-900 border-b border-slate-800 p-2.5 px-3 sm:px-4 text-xs overflow-x-auto select-none">
+          <div className="flex items-center gap-1.5 min-w-max">
+            <span className="text-[10px] font-mono text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1 mr-1">
+              <Filter className="w-3 h-3 text-sky-400" />
+              <span>Telemetry Layer:</span>
+            </span>
 
-          {/* All 9 Endpoints Layer Buttons */}
-          <button
-            onClick={() => setActiveDatasetTab('all')}
-            className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer ${
-              activeDatasetTab === 'all'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            All 9 Datasets ({districtWaterBodies.length})
-          </button>
+            {/* All 9 Endpoints Layer Buttons */}
+            <button
+              onClick={() => setActiveDatasetTab('all')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer ${
+                activeDatasetTab === 'all'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              All 9 Datasets ({districtWaterBodies.length})
+            </button>
 
-          <button
-            onClick={() => setActiveDatasetTab('river_level')}
-            className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
-              activeDatasetTab === 'river_level'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <span>🌊</span>
-            <span>POST /Dataset/River Water Level</span>
-          </button>
+            <button
+              onClick={() => setActiveDatasetTab('river_level')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
+                activeDatasetTab === 'river_level'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <span>🌊</span>
+              <span>POST /Dataset/River Water Level</span>
+            </button>
 
-          <button
-            onClick={() => setActiveDatasetTab('river_discharge')}
-            className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
-              activeDatasetTab === 'river_discharge'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <span>⚡</span>
-            <span>POST /Dataset/River Water Discharge</span>
-          </button>
+            <button
+              onClick={() => setActiveDatasetTab('river_discharge')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
+                activeDatasetTab === 'river_discharge'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <span>⚡</span>
+              <span>POST /Dataset/River Water Discharge</span>
+            </button>
 
-          <button
-            onClick={() => setActiveDatasetTab('reservoir')}
-            className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
-              activeDatasetTab === 'reservoir'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <span>💧</span>
-            <span>POST /Dataset/Reservoir</span>
-          </button>
+            <button
+              onClick={() => setActiveDatasetTab('reservoir')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
+                activeDatasetTab === 'reservoir'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <span>💧</span>
+              <span>POST /Dataset/Reservoir</span>
+            </button>
 
-          <button
-            onClick={() => setActiveDatasetTab('rainfall')}
-            className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
-              activeDatasetTab === 'rainfall'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <span>🌧️</span>
-            <span>POST /Dataset/RainFall</span>
-          </button>
+            <button
+              onClick={() => setActiveDatasetTab('rainfall')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
+                activeDatasetTab === 'rainfall'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <span>🌧️</span>
+              <span>POST /Dataset/RainFall</span>
+            </button>
 
-          <button
-            onClick={() => setActiveDatasetTab('groundwater')}
-            className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
-              activeDatasetTab === 'groundwater'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <span>🧪</span>
-            <span>POST /Dataset/Ground Water Level</span>
-          </button>
+            <button
+              onClick={() => setActiveDatasetTab('groundwater')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
+                activeDatasetTab === 'groundwater'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <span>🧪</span>
+              <span>POST /Dataset/Ground Water Level</span>
+            </button>
 
-          <button
-            onClick={() => setActiveDatasetTab('basin_river_level')}
-            className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
-              activeDatasetTab === 'basin_river_level'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <span className="text-sky-400">🌊</span>
-            <span>POST /Dataset/Basin/River WaterLevel</span>
-          </button>
+            <button
+              onClick={() => setActiveDatasetTab('basin_river_level')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
+                activeDatasetTab === 'basin_river_level'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <span className="text-sky-400">🌊</span>
+              <span>POST /Dataset/Basin/River WaterLevel</span>
+            </button>
 
-          <button
-            onClick={() => setActiveDatasetTab('basin_river_discharge')}
-            className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
-              activeDatasetTab === 'basin_river_discharge'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <span className="text-sky-400">⚡</span>
-            <span>POST /Dataset/Basin/River Water Discharge</span>
-          </button>
+            <button
+              onClick={() => setActiveDatasetTab('basin_river_discharge')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
+                activeDatasetTab === 'basin_river_discharge'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <span className="text-sky-400">⚡</span>
+              <span>POST /Dataset/Basin/River Water Discharge</span>
+            </button>
 
-          <button
-            onClick={() => setActiveDatasetTab('basin_reservoir')}
-            className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
-              activeDatasetTab === 'basin_reservoir'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <span className="text-emerald-400">💧</span>
-            <span>POST /Dataset/Basin/Reservoir</span>
-          </button>
+            <button
+              onClick={() => setActiveDatasetTab('basin_reservoir')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
+                activeDatasetTab === 'basin_reservoir'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <span className="text-emerald-400">💧</span>
+              <span>POST /Dataset/Basin/Reservoir</span>
+            </button>
 
-          <button
-            onClick={() => setActiveDatasetTab('basin_rainfall')}
-            className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
-              activeDatasetTab === 'basin_rainfall'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <span className="text-blue-400">🌧️</span>
-            <span>POST /Dataset/Basin/RainFall</span>
-          </button>
+            <button
+              onClick={() => setActiveDatasetTab('basin_rainfall')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
+                activeDatasetTab === 'basin_rainfall'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <span className="text-blue-400">🌧️</span>
+              <span>POST /Dataset/Basin/RainFall</span>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ============================================================== */}
       {/* 3. MAP CANVAS WITH NO OVERLAPPING LABELS & CLEAN WATER NETWORK */}
@@ -620,7 +662,24 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
       <div className={`relative w-full ${isMapExpanded ? 'h-[750px] sm:h-[840px] lg:h-[920px]' : 'h-[580px] sm:h-[660px] lg:h-[720px]'} overflow-hidden select-none transition-all duration-300 ${
         theme === 'light' ? 'bg-[#f8fafc]' : 'bg-gradient-to-b from-slate-950 via-[#071326] to-[#0b1b36]'
       }`}>
-        {/* Floating 15-Day NDWI Satellite Mode Banner */}
+        {effectiveDistrict === 'Vizianagaram' ? (
+          <VizianagaramCadastralMapSvg
+            waterBodies={waterBodies}
+            activeWaterBody={activeWaterBody}
+            hoveredWaterBody={hoveredWaterBody}
+            onSelectWaterBody={handleSelectWaterBody}
+            onSelectMandal={handleSelectMandal}
+            selectedMandalId={selectedMandalId}
+            theme={theme}
+            showRivers={showVzmRivers}
+            showTanks={showVzmTanks}
+            showSensors={showVzmSensors}
+            onSwitchDistrict={(dist) => setSelectedDistrict(dist)}
+            onLodgeComplaint={onLodgeComplaint}
+          />
+        ) : (
+          <>
+            {/* Floating 15-Day NDWI Satellite Mode Banner */}
         {isNdwiSatelliteOverlayActive && (
           <div className="absolute top-3 left-3 z-20 bg-slate-950/90 backdrop-blur-md border border-indigo-500/50 text-white rounded-xl px-3 py-1.5 text-xs font-mono flex items-center gap-2 shadow-lg">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
@@ -945,13 +1004,15 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
             );
           })}
         </svg>
+          </>
+        )}
       </div>
 
       {/* ============================================================== */}
       {/* 4. BOTTOM SURVEILLANCE CARD (DISPLAYS SELECTED ENDPOINT DATA)   */}
       {/* ============================================================== */}
       {activeWaterBody && (
-        <div className="p-4 sm:p-5 bg-white border-t border-slate-200">
+        <div id="apwrims-dossier" className="p-4 sm:p-5 bg-white border-t border-slate-200">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
             <div className="space-y-1.5">
               <div className="flex items-center gap-2 flex-wrap">

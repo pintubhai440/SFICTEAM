@@ -1259,38 +1259,6 @@ export const InteractiveIndiaMap: React.FC<InteractiveIndiaMapProps> = ({
           })}
         </svg>
 
-        {/* Legend Box at Top Left on Canvas */}
-        <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md p-3 rounded-2xl border border-slate-200 text-xs shadow-md space-y-1.5 max-w-[240px]">
-          <div className="flex items-center gap-1.5 border-b border-slate-100 pb-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="text-[10px] font-bold text-slate-800 uppercase tracking-wider">
-              WATER MONITORING CODES
-            </span>
-          </div>
-          <div className="space-y-1 text-[11px] font-medium text-slate-600">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#10b981] shrink-0"></span>
-              <span><strong>Green:</strong> Bahut Achha (Pristine)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#0284c7] shrink-0"></span>
-              <span><strong>Blue:</strong> Normal (Acceptable)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b] shrink-0"></span>
-              <span><strong>Yellow:</strong> Middle Problem (Stress)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444] shrink-0 animate-pulse"></span>
-              <span><strong>Red:</strong> Danger Zone (Contamination)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#64748b] shrink-0"></span>
-              <span><strong>Grey:</strong> ⚪ Sookh Kar Mit Gaya (Extinct)</span>
-            </div>
-          </div>
-        </div>
-
         {/* Floating Quick Action Button on Map */}
         {onLodgeComplaint && (
           <div className="absolute top-3 right-3">

@@ -376,6 +376,7 @@ export default function App() {
             complaints={complaints}
             officers={officers}
             onOpenDirectoryModal={() => setIsDirectoryModalOpen(true)}
+            onOpenLodgeModal={() => setIsLodgeModalOpen(true)}
           />
         )}
 

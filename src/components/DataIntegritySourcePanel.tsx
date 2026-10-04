@@ -136,7 +136,7 @@ export const DataIntegritySourcePanel: React.FC = () => {
           Why This Architecture Uses Public Geospatial Datasets Instead of Speculative IoT Sensors
         </h4>
         <p className="leading-relaxed text-slate-600">
-          Deploying physical IoT microcontrollers (Arduino/ESP32) on millions of scattered rural farm borewells is cost-prohibitive, unscalable, and susceptible to power outages and vandalization. <strong>JalDrishti</strong> solves this by leveraging India's existing world-class satellite infrastructure (ISRO Bhuvan, Sentinel-2), CGWB's automated piezometric telemetry network, and ground social audits under Gram Panchayats.
+          Deploying physical IoT microcontrollers (Arduino/ESP32) on millions of scattered rural farm borewells is cost-prohibitive, unscalable, and susceptible to power outages and vandalization. <strong>Nir-ikshan</strong> solves this by leveraging India's existing world-class satellite infrastructure (ISRO Bhuvan, Sentinel-2), CGWB's automated piezometric telemetry network, and ground social audits under Gram Panchayats.
         </p>
       </div>
     </div>

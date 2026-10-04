@@ -136,7 +136,7 @@ export const ReportEndangeredModal: React.FC<ReportEndangeredModalProps> = ({
       assignedPanchayat: `${currentWs.district} Gram Panchayat Cell`,
       assignedNodalOfficer: `District Nodal Officer (Minor Irrigation & Ground Water)`,
       status: 'PENDING_VERIFICATION',
-      inspectionNotes: 'Public hazard complaint logged via JalDrishti Citizen Surveillance Portal.',
+      inspectionNotes: 'Public hazard complaint logged via Nir-ikshan Citizen Surveillance Portal.',
     };
 
     onComplaintSubmitted(newComplaint);

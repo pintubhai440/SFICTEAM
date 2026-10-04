@@ -1,6 +1,6 @@
 {
-  "name": "JalDrishti - Micro-Watershed Water Accountability Grid",
-  "description": "National micro-watershed water accountability ledger, geospatial stress surveillance, recharge asset registry & intervention simulator for SFIC Theme 2.",
+  "name": "Nir-ikshan: National Micro-Watershed Grid & Hydrological Surveillance",
+  "description": "Nir-ikshan (नीर-ईक्षण): Real-time geospatial hydrological surveillance, satellite NDWI verification, and citizen water grievance accountability across India.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

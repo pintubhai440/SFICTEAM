@@ -25,8 +25,8 @@ export interface BhuvanWbisMetadata {
   satelliteMission: string; // e.g. "ISRO Resourcesat-2A (AWiFS / LISS-IV)"
   sensorName?: string; // e.g. "AWiFS (56m) + Sentinel-2 MSI (10m Multi-spectral)"
   last15DayPassDate: string; // Latest 15-day orbital observation
-  previousPassDate: string; // Previous pass 15 days earlier
-  nextPassDate: string; // Next scheduled 15-day pass
+  previousPassDate?: string; // Previous pass 15 days earlier
+  nextPassDate?: string; // Next scheduled 15-day pass
   cycleDays: number; // 15
   cloudCoverPercent: number; // Cloud obscuration during satellite pass
   siltationIndexPercent: number; // Silt accumulation percentage
@@ -54,6 +54,7 @@ export interface WaterBody {
     waterLevelM?: number;
     dangerLevelM?: number;
     dischargeCusecs?: number;
+    inflowCusecs?: number;
     rainfallMm?: number;
     departurePercent?: number;
     depthToWaterM_bgl?: number;
@@ -72,7 +73,7 @@ export interface WaterBody {
   wasteLevel: 'None' | 'Low' | 'Moderate' | 'Heavy' | 'Extinct';
   lastInspected: string;
   description: string;
-  imageUrl: string;
+  imageUrl?: string;
 }
 
 export type UserRoleType = 'overview' | 'admin' | 'user' | 'nodal_vizianagaram' | 'nodal_parvathipuram' | 'inspector' | 'engineer';

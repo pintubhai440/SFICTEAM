@@ -101,7 +101,7 @@ export const StakeholderEngagementDashboard: React.FC<StakeholderEngagementDashb
     const rawDigits = stakeholder.phone.replace(/[^0-9]/g, '');
     const cleanPhone = rawDigits.startsWith('91') ? rawDigits : `91${rawDigits}`;
     const textMsg = encodeURIComponent(
-      `Respected ${stakeholder.name} (${stakeholder.designation}),\n\nI am contacting you regarding micro-watershed water accountability in *${currentWs.name}* (District: ${currentWs.district}, Code: ${currentWs.code}). Current status is *${currentWs.currentStatus.toUpperCase()}* with ${currentWs.needsRepairCount} recharge assets needing desiltation/repairs.\n\nKindly advise on the Gram Sabha / VWSC schedule and maintenance timeline.\n\nSent via JalDrishti National Portal.`
+      `Respected ${stakeholder.name} (${stakeholder.designation}),\n\nI am contacting you regarding micro-watershed water accountability in *${currentWs.name}* (District: ${currentWs.district}, Code: ${currentWs.code}). Current status is *${currentWs.currentStatus.toUpperCase()}* with ${currentWs.needsRepairCount} recharge assets needing desiltation/repairs.\n\nKindly advise on the Gram Sabha / VWSC schedule and maintenance timeline.\n\nSent via Nir-ikshan National Portal.`
     );
     window.open(`https://wa.me/${cleanPhone}?text=${textMsg}`, '_blank');
   };
