@@ -1,5 +1,5 @@
-import express, { Request, Response } from 'express';
-import { createServer as createViteServer } from 'vite';
+import express, { Request, Response, NextFunction } from 'express';
+import { createServer as createViteServer, ViteDevServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 // @ts-ignore
@@ -10,16 +10,24 @@ import bhuvanHandler from './api/bhuvan.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = 3000;
+const PORT = Number(process.env.DEFAULT_APP_PORT) || 3000;
 
 async function startServer() {
   const app = express();
   app.use(express.json());
 
+  // Health check endpoint for instant platform readiness checks
+  app.get('/health', (_req: Request, res: Response) => {
+    res.status(200).json({ status: 'ok', time: new Date().toISOString() });
+  });
+
   // Mount unified India WRIS multi-dataset proxy (same logic as Vercel)
   app.all('/api/wris', wrisHandler);
   // Mount ISRO Bhuvan API gateway & connection test endpoint
   app.all('/api/bhuvan', bhuvanHandler);
+
+  let viteServer: ViteDevServer | null = null;
+  let vitePromise: Promise<ViteDevServer> | null = null;
 
   if (process.env.NODE_ENV === 'production') {
     app.use(express.static(path.resolve(__dirname, 'dist')));
@@ -27,19 +35,52 @@ async function startServer() {
       res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
     });
   } else {
-    const vite = await createViteServer({
+    vitePromise = createViteServer({
       server: {
         middlewareMode: true,
         hmr: process.env.DISABLE_HMR !== 'true',
+        watch: process.env.DISABLE_HMR === 'true' ? null : undefined,
       },
       appType: 'spa',
+    }).then((server) => {
+      viteServer = server;
+      console.log('Vite dev middleware attached');
+      return server;
     });
-    app.use(vite.middlewares);
+
+    app.use(async (req: Request, res: Response, next: NextFunction) => {
+      if (req.path.startsWith('/api') || req.path === '/health') {
+        return next();
+      }
+      if (!viteServer && vitePromise) {
+        await vitePromise;
+      }
+      if (viteServer) {
+        return viteServer.middlewares(req, res, next);
+      }
+      next();
+    });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server listening on http://0.0.0.0:${PORT}`);
   });
+
+  const shutdown = () => {
+    console.log('Shutting down server...');
+    if (viteServer) {
+      viteServer.close();
+    }
+    server.close(() => {
+      process.exit(0);
+    });
+  };
+
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 }
 
-startServer();
+startServer().catch((err) => {
+  console.error('Fatal error starting server:', err);
+  process.exit(1);
+});

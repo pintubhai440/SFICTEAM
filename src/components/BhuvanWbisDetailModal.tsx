@@ -44,29 +44,35 @@ export const BhuvanWbisDetailModal: React.FC<BhuvanWbisDetailModalProps> = ({
 
   if (!isOpen || !waterBody) return null;
 
+  const isGroundwater = waterBody.datasetType === 'groundwater' || waterBody.type === 'Groundwater Well';
+  const isRiver = waterBody.datasetType === 'river_level' || waterBody.datasetType === 'river_discharge' || waterBody.datasetType === 'basin_river_level' || waterBody.datasetType === 'basin_river_discharge' || waterBody.type === 'River' || waterBody.type === 'Canal';
+  const isRainfall = waterBody.datasetType === 'rainfall' || waterBody.datasetType === 'basin_rainfall' || waterBody.type === 'Rainfall Station';
+
   const wbis = waterBody.bhuvanWbis || {
-    ndwiScore: waterBody.statusColor === 'grey' ? -0.26 : waterBody.statusColor === 'green' ? 0.44 : waterBody.statusColor === 'blue' ? 0.28 : waterBody.statusColor === 'yellow' ? 0.12 : -0.08,
+    ndwiScore: waterBody.statusColor === 'grey' ? -0.26 : isGroundwater ? 0.24 : waterBody.statusColor === 'green' ? 0.44 : waterBody.statusColor === 'blue' ? 0.28 : waterBody.statusColor === 'yellow' ? 0.12 : -0.08,
     ndwiClassification: waterBody.statusColor === 'grey' 
       ? 'Extinct / Encroached / Built-up (< -0.15)' 
+      : isGroundwater
+      ? 'Active Hill Spring & Aquifer Head (0.24 NDMI)'
       : waterBody.statusColor === 'green' 
       ? 'Deep Surface Water (NDWI > 0.3)' 
       : waterBody.statusColor === 'blue' 
       ? 'Moderate Surface Water (0.1 - 0.3)' 
       : 'Shallow / Turbid Water (0.0 - 0.1)',
-    waterSpreadAreaHa: waterBody.statusColor === 'grey' ? 0.0 : Math.round((waterBody.waterLevelPercent * 0.45 + 5) * 10) / 10,
-    historicalBaselineHa: waterBody.statusColor === 'grey' ? 18.5 : Math.round((waterBody.waterLevelPercent * 0.5 + 8) * 10) / 10,
-    areaChangePercent: waterBody.statusColor === 'grey' ? -100 : waterBody.waterLevelPercent > 60 ? +4.2 : -18.5,
-    satelliteMission: 'ISRO Resourcesat-2A (AWiFS / LISS-IV)',
-    sensorName: 'AWiFS (56m Swath) + Sentinel-2 MSI (10m Multi-spectral)',
+    waterSpreadAreaHa: isGroundwater ? 14.8 : waterBody.statusColor === 'grey' ? 0.0 : Math.round((waterBody.waterLevelPercent * 0.45 + 5) * 10) / 10,
+    historicalBaselineHa: isGroundwater ? 14.8 : waterBody.statusColor === 'grey' ? 18.5 : Math.round((waterBody.waterLevelPercent * 0.5 + 8) * 10) / 10,
+    areaChangePercent: waterBody.statusColor === 'grey' ? -100 : isGroundwater ? 1.4 : waterBody.waterLevelPercent > 60 ? +4.2 : -18.5,
+    satelliteMission: isGroundwater ? 'ISRO Resourcesat-2A (LISS-IV 5.8m) & Sentinel-2' : 'ISRO Resourcesat-2A (AWiFS / LISS-IV)',
+    sensorName: isGroundwater ? 'LISS-IV (5.8m High-Res) + Hydrogeological Lineament Mapping' : 'AWiFS (56m Swath) + Sentinel-2 MSI (10m Multi-spectral)',
     last15DayPassDate: '2026-10-02',
     previousPassDate: '2026-09-17',
     nextPassDate: '2026-10-17',
     cycleDays: 15,
-    cloudCoverPercent: 4.8,
-    siltationIndexPercent: waterBody.statusColor === 'grey' ? 96 : waterBody.statusColor === 'red' ? 74 : waterBody.statusColor === 'yellow' ? 42 : 12,
-    encroachmentRisk: waterBody.statusColor === 'grey' ? 'Total Extinction' : waterBody.statusColor === 'red' ? 'Severe' : waterBody.statusColor === 'yellow' ? 'Moderate' : 'None',
+    cloudCoverPercent: isGroundwater ? 2.1 : 4.8,
+    siltationIndexPercent: isGroundwater ? 0 : waterBody.statusColor === 'grey' ? 96 : waterBody.statusColor === 'red' ? 74 : waterBody.statusColor === 'yellow' ? 42 : 12,
+    encroachmentRisk: isGroundwater ? 'None' : waterBody.statusColor === 'grey' ? 'Total Extinction' : waterBody.statusColor === 'red' ? 'Severe' : waterBody.statusColor === 'yellow' ? 'Moderate' : 'None',
     waterRemainingPercent: waterBody.waterLevelPercent,
-    estimatedVolumeMCM: waterBody.liveTelemetry?.storageMCM || Math.round((waterBody.waterLevelPercent * 0.3) * 10) / 10,
+    estimatedVolumeMCM: isGroundwater ? 1.8 : waterBody.liveTelemetry?.storageMCM || Math.round((waterBody.waterLevelPercent * 0.3) * 10) / 10,
     isExtinct: waterBody.statusColor === 'grey',
     extinctionReason: waterBody.statusColor === 'grey' ? 'Talab sookh kar mit gaya: severe siltation deposition, unauthorized construction encroachment, and feeder canal diversion.' : undefined,
   };
@@ -113,11 +119,19 @@ export const BhuvanWbisDetailModal: React.FC<BhuvanWbisDetailModalProps> = ({
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold bg-white/15 text-white border border-white/20 backdrop-blur-xs">
                   <Satellite className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
-                  <span>ISRO Bhuvan WBIS Satellite Telemetry</span>
+                  <span>
+                    {isGroundwater
+                      ? 'ISRO Bhuvan GWIS Satellite & Hydrogeology Telemetry'
+                      : isRiver
+                      ? 'ISRO Bhuvan River Basin & Fluvial Telemetry'
+                      : isRainfall
+                      ? 'ISRO Bhuvan AWS Precipitation Telemetry'
+                      : 'ISRO Bhuvan WBIS Satellite Telemetry'}
+                  </span>
                 </span>
 
                 <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-200 border border-indigo-400/30">
-                  15-Day Cycle Pass
+                  {isGroundwater ? 'DWLR Piezometer Pass' : '15-Day Cycle Pass'}
                 </span>
 
                 {isExtinct ? (
@@ -192,7 +206,7 @@ export const BhuvanWbisDetailModal: React.FC<BhuvanWbisDetailModalProps> = ({
             }`}
           >
             <Satellite className="w-4 h-4 text-[#0047ab]" />
-            <span>15-Day WBIS Satellite Telemetry</span>
+            <span>{isGroundwater ? '15-Day GWIS Satellite & Spring Telemetry' : isRiver ? '15-Day River Basin Telemetry' : '15-Day WBIS Satellite Telemetry'}</span>
           </button>
 
           <button
@@ -204,7 +218,7 @@ export const BhuvanWbisDetailModal: React.FC<BhuvanWbisDetailModalProps> = ({
             }`}
           >
             <Gauge className="w-4 h-4 text-emerald-600" />
-            <span>NDWI Water Spread & Capacity</span>
+            <span>{isGroundwater ? 'DWLR Aquifer Depth & Spring Analytics' : isRiver ? 'River Stage & Discharge Analytics' : 'NDWI Water Spread & Capacity'}</span>
           </button>
 
           <button
@@ -265,7 +279,7 @@ export const BhuvanWbisDetailModal: React.FC<BhuvanWbisDetailModalProps> = ({
                     Cloud Obscuration: {wbis.cloudCoverPercent}%
                   </div>
                   <span className="text-[11px] text-slate-500 block mt-1">
-                    Spatial Resolution: 56m AWiFS / 10m Multi-spectral
+                    Spatial Resolution: {isGroundwater ? '5.8m LISS-IV / 10m Sentinel-2' : '56m AWiFS / 10m Multi-spectral'}
                   </span>
                 </div>
               </div>
@@ -275,7 +289,11 @@ export const BhuvanWbisDetailModal: React.FC<BhuvanWbisDetailModalProps> = ({
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="text-xs font-mono font-bold text-sky-300 uppercase tracking-wider flex items-center gap-2">
                     <Activity className="w-4 h-4 text-sky-400" />
-                    <span>ISRO Bhuvan 15-Day Satellite Pass Timeline (Andhra Pradesh Circle)</span>
+                    <span>
+                      {isGroundwater 
+                        ? 'ISRO Bhuvan GWIS 15-Day Aquifer & Spring Telemetry Timeline' 
+                        : 'ISRO Bhuvan 15-Day Satellite Pass Timeline (Andhra Pradesh Circle)'}
+                    </span>
                   </h4>
                   <span className="text-[11px] text-slate-400 font-mono">15-Day Recurrence Interval</span>
                 </div>
@@ -288,6 +306,8 @@ export const BhuvanWbisDetailModal: React.FC<BhuvanWbisDetailModalProps> = ({
                     <p className="text-[11px] text-slate-400 mt-1">
                       {isExtinct 
                         ? 'Satellite reported NDWI < -0.20: Complete dry bed detected.' 
+                        : isGroundwater
+                        ? 'Sub-surface aquifer storage & hill spring discharge baseline verified.'
                         : 'Baseline water perimeter captured under standard reflectance.'}
                     </p>
                   </div>
@@ -302,6 +322,8 @@ export const BhuvanWbisDetailModal: React.FC<BhuvanWbisDetailModalProps> = ({
                     <p className="text-[11px] text-blue-200 mt-1">
                       {isExtinct
                         ? 'NDWI: ' + wbis.ndwiScore + ' (Zero water detected, dry/encroached soil signature)'
+                        : isGroundwater
+                        ? `DWLR: ${waterBody.liveTelemetry?.depthToWaterM_bgl ?? 6.8}m bgl • Recharge: ${waterBody.liveTelemetry?.rechargeTrend ?? '+1.4m'} • Spring Yield: 92%`
                         : `NDWI: ${wbis.ndwiScore} • Water Spread: ${wbis.waterSpreadAreaHa} ha (${wbis.waterRemainingPercent}% live volume)`}
                     </p>
                   </div>
@@ -311,7 +333,9 @@ export const BhuvanWbisDetailModal: React.FC<BhuvanWbisDetailModalProps> = ({
                     <span className="text-[10px] font-mono text-slate-400 block uppercase">Next Scheduled Orbit</span>
                     <span className="text-xs font-bold text-amber-300 mt-1 block">{wbis.nextPassDate}</span>
                     <p className="text-[11px] text-slate-400 mt-1">
-                      Automated change detection algorithm will compare water surface boundary against today's snapshot.
+                      {isGroundwater
+                        ? 'ISRO LISS-IV will monitor hydrogeological vegetation canopy & recharge zone.'
+                        : "Automated change detection algorithm will compare water surface boundary against today's snapshot."}
                     </p>
                   </div>
                 </div>
@@ -320,7 +344,7 @@ export const BhuvanWbisDetailModal: React.FC<BhuvanWbisDetailModalProps> = ({
               {/* Water Spread Change & Extinction Status Summary */}
               <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3">
                 <h4 className="text-sm font-bold text-slate-900 flex items-center justify-between">
-                  <span>Satellite Water Spread Area (WSA) Analysis</span>
+                  <span>{isGroundwater ? 'Hydrogeological Spring Catchment & DWLR Status' : 'Satellite Water Spread Area (WSA) Analysis'}</span>
                   <span className={`text-xs font-mono font-bold px-2.5 py-0.5 rounded-full ${
                     isExtinct ? 'bg-slate-200 text-slate-800' :
                     wbis.areaChangePercent >= 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
@@ -330,121 +354,246 @@ export const BhuvanWbisDetailModal: React.FC<BhuvanWbisDetailModalProps> = ({
                 </h4>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                    <span className="text-[10px] font-mono text-slate-400 block uppercase">Current Spread</span>
-                    <span className="text-base font-bold font-mono text-slate-900 mt-0.5 block">
-                      {wbis.waterSpreadAreaHa} <span className="text-xs font-sans text-slate-500">ha</span>
-                    </span>
-                    <span className="text-[10px] text-slate-500 block">{(wbis.waterSpreadAreaHa * 2.471).toFixed(1)} Acres</span>
-                  </div>
+                  {isGroundwater ? (
+                    <>
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <span className="text-[10px] font-mono text-slate-400 block uppercase">Spring Catchment</span>
+                        <span className="text-base font-bold font-mono text-slate-900 mt-0.5 block">
+                          {wbis.waterSpreadAreaHa} <span className="text-xs font-sans text-slate-500">ha</span>
+                        </span>
+                        <span className="text-[10px] text-slate-500 block">{(wbis.waterSpreadAreaHa * 2.471).toFixed(1)} Acres Protected</span>
+                      </div>
 
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                    <span className="text-[10px] font-mono text-slate-400 block uppercase">Historical Baseline</span>
-                    <span className="text-base font-bold font-mono text-slate-900 mt-0.5 block">
-                      {wbis.historicalBaselineHa} <span className="text-xs font-sans text-slate-500">ha</span>
-                    </span>
-                    <span className="text-[10px] text-slate-500 block">NRSC Atlas (2015-18)</span>
-                  </div>
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <span className="text-[10px] font-mono text-slate-400 block uppercase">DWLR Water Depth</span>
+                        <span className="text-base font-bold font-mono text-slate-900 mt-0.5 block">
+                          {waterBody.liveTelemetry?.depthToWaterM_bgl ?? 6.8} <span className="text-xs font-sans text-slate-500">m bgl</span>
+                        </span>
+                        <span className="text-[10px] text-emerald-600 font-bold block">{waterBody.liveTelemetry?.rechargeTrend ?? '+1.4m Rising'}</span>
+                      </div>
 
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                    <span className="text-[10px] font-mono text-slate-400 block uppercase">Live Water Volume</span>
-                    <span className="text-base font-bold font-mono text-slate-900 mt-0.5 block">
-                      {wbis.waterRemainingPercent}%
-                    </span>
-                    <span className="text-[10px] text-slate-500 block">{wbis.estimatedVolumeMCM} MCM Storage</span>
-                  </div>
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <span className="text-[10px] font-mono text-slate-400 block uppercase">Dynamic Aquifer Head</span>
+                        <span className="text-base font-bold font-mono text-slate-900 mt-0.5 block">
+                          {waterBody.waterLevelPercent}%
+                        </span>
+                        <span className="text-[10px] text-slate-500 block">Perennial Hill Flow</span>
+                      </div>
 
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                    <span className="text-[10px] font-mono text-slate-400 block uppercase">Siltation / Choke</span>
-                    <span className={`text-base font-bold font-mono mt-0.5 block ${
-                      wbis.siltationIndexPercent > 70 ? 'text-rose-600' :
-                      wbis.siltationIndexPercent > 35 ? 'text-amber-600' : 'text-emerald-600'
-                    }`}>
-                      {wbis.siltationIndexPercent}%
-                    </span>
-                    <span className="text-[10px] text-slate-500 block">Bed Silt Depth Index</span>
-                  </div>
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <span className="text-[10px] font-mono text-slate-400 block uppercase">Spring Water Purity</span>
+                        <span className="text-base font-bold font-mono text-emerald-600 mt-0.5 block">
+                          {waterBody.tdsPpm} <span className="text-xs font-sans text-slate-500">ppm</span>
+                        </span>
+                        <span className="text-[10px] text-emerald-700 font-semibold block">Grade A Mineral Spring</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <span className="text-[10px] font-mono text-slate-400 block uppercase">Current Spread</span>
+                        <span className="text-base font-bold font-mono text-slate-900 mt-0.5 block">
+                          {wbis.waterSpreadAreaHa} <span className="text-xs font-sans text-slate-500">ha</span>
+                        </span>
+                        <span className="text-[10px] text-slate-500 block">{(wbis.waterSpreadAreaHa * 2.471).toFixed(1)} Acres</span>
+                      </div>
+
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <span className="text-[10px] font-mono text-slate-400 block uppercase">Historical Baseline</span>
+                        <span className="text-base font-bold font-mono text-slate-900 mt-0.5 block">
+                          {wbis.historicalBaselineHa} <span className="text-xs font-sans text-slate-500">ha</span>
+                        </span>
+                        <span className="text-[10px] text-slate-500 block">NRSC Atlas (2015-18)</span>
+                      </div>
+
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <span className="text-[10px] font-mono text-slate-400 block uppercase">Live Water Volume</span>
+                        <span className="text-base font-bold font-mono text-slate-900 mt-0.5 block">
+                          {wbis.waterRemainingPercent}%
+                        </span>
+                        <span className="text-[10px] text-slate-500 block">{wbis.estimatedVolumeMCM} MCM Storage</span>
+                      </div>
+
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <span className="text-[10px] font-mono text-slate-400 block uppercase">Siltation / Choke</span>
+                        <span className={`text-base font-bold font-mono mt-0.5 block ${
+                          wbis.siltationIndexPercent > 70 ? 'text-rose-600' :
+                          wbis.siltationIndexPercent > 35 ? 'text-amber-600' : 'text-emerald-600'
+                        }`}>
+                          {wbis.siltationIndexPercent}%
+                        </span>
+                        <span className="text-[10px] text-slate-500 block">Bed Silt Depth Index</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
           )}
 
-          {/* TAB 2: NDWI WATER INDEX & VOLUME FORMULA */}
+          {/* TAB 2: NDWI WATER INDEX OR DWLR AQUIFER HYDROGEOLOGY */}
           {activeTab === 'ndwi' && (
             <div className="space-y-5">
-              {/* Formula & Explanation */}
-              <div className="bg-emerald-50/70 border border-emerald-200 p-4 rounded-2xl space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-bold text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
-                    <Gauge className="w-4 h-4 text-emerald-700" />
-                    <span>Normalized Difference Water Index (NDWI) Standard</span>
-                  </span>
-                  <span className="text-xs font-mono font-bold bg-white px-2 py-0.5 rounded border border-emerald-300 text-emerald-800">
-                    Formula: (Green - NIR) / (Green + NIR)
-                  </span>
-                </div>
-                <p className="text-xs text-emerald-950 leading-relaxed">
-                  ISRO Bhuvan WBIS utilizes multi-spectral optical reflectance. Open water bodies absorb Near-Infrared (NIR) radiation while reflecting Green light, resulting in high positive values (&gt;0.2). Silt-choked, dry, or encroached beds reflect high NIR and show negative NDWI values (&lt;0.0).
-                </p>
-              </div>
+              {isGroundwater ? (
+                <>
+                  {/* DWLR Hydrogeology Explanation */}
+                  <div className="bg-sky-50/80 border border-sky-200 p-4 rounded-2xl space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-mono font-bold text-sky-950 uppercase tracking-wider flex items-center gap-1.5">
+                        <Gauge className="w-4 h-4 text-sky-700" />
+                        <span>ISRO Bhuvan GWIS & DWLR Spring Piezometer Telemetry</span>
+                      </span>
+                      <span className="text-xs font-mono font-bold bg-white px-2 py-0.5 rounded border border-sky-300 text-sky-800">
+                        CGWB National Aquifer Mapping (NAQUIM)
+                      </span>
+                    </div>
+                    <p className="text-xs text-sky-950 leading-relaxed">
+                      ISRO Bhuvan Groundwater Prospects Information System (GWIS) integrates Digital Water Level Recorders (DWLR) with multi-spectral LISS-IV & Sentinel-2 hydrogeological lineament mapping. For <strong>{waterBody.name}</strong>, perennial recharge originates from unconfined/semi-confined fracture granite-gneiss formations in the Eastern Ghats hill range.
+                    </p>
+                  </div>
 
-              {/* NDWI Score Meter */}
-              <div className="bg-white border border-slate-200 p-5 rounded-2xl space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div>
-                    <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block">Spectral Score Gauge</span>
-                    <div className="text-3xl font-black font-mono mt-1 flex items-baseline gap-2">
-                      <span className={
-                        wbis.ndwiScore > 0.3 ? 'text-emerald-600' :
-                        wbis.ndwiScore > 0.1 ? 'text-sky-600' :
-                        wbis.ndwiScore > 0.0 ? 'text-amber-600' :
-                        'text-rose-600'
-                      }>
-                        {wbis.ndwiScore > 0 ? `+${wbis.ndwiScore.toFixed(2)}` : wbis.ndwiScore.toFixed(2)}
+                  {/* DWLR Depth Gauge Meter */}
+                  <div className="bg-white border border-slate-200 p-5 rounded-2xl space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block">Piezometer Aquifer Depth</span>
+                        <div className="text-3xl font-black font-mono mt-1 flex items-baseline gap-2">
+                          <span className="text-emerald-600">
+                            {waterBody.liveTelemetry?.depthToWaterM_bgl ?? 6.8} m bgl
+                          </span>
+                          <span className="text-sm font-sans font-medium text-slate-500">
+                            (Depth Below Ground Level • {waterBody.liveTelemetry?.rechargeTrend ?? '+1.4m Rising'})
+                          </span>
+                        </div>
+                      </div>
+
+                      <span className="text-xs font-mono font-bold px-3 py-1.5 rounded-xl uppercase tracking-wider self-start sm:self-auto bg-emerald-600 text-white">
+                        HIGH AQUIFER PRESSURE & SPRING FLOW
                       </span>
-                      <span className="text-sm font-sans font-medium text-slate-500">
-                        ({wbis.ndwiClassification})
-                      </span>
+                    </div>
+
+                    {/* Visual DWLR Depth Bar */}
+                    <div className="space-y-1.5">
+                      <div className="h-4 w-full rounded-full bg-gradient-to-r from-emerald-600 via-sky-400 via-amber-400 to-rose-600 relative overflow-visible">
+                        {(() => {
+                          const depth = waterBody.liveTelemetry?.depthToWaterM_bgl ?? 6.8;
+                          const percent = Math.max(0, Math.min(100, (depth / 20) * 100));
+                          return (
+                            <div
+                              style={{ left: `${percent}%` }}
+                              className="absolute -top-1 transform -translate-x-1/2 w-3 h-6 bg-slate-950 border-2 border-white rounded-md shadow-md"
+                              title={`Current Depth: ${depth}m bgl`}
+                            />
+                          );
+                        })()}
+                      </div>
+
+                      <div className="flex justify-between text-[10px] font-mono text-slate-500 pt-1">
+                        <span>0.0m (Artesian Flow)</span>
+                        <span>5.0m (High Spring Yield)</span>
+                        <span>10.0m (Normal Aquifer)</span>
+                        <span>15.0m (Deep Water)</span>
+                        <span>20.0m+ (Depleted)</span>
+                      </div>
                     </div>
                   </div>
 
-                  <span className={`text-xs font-mono font-bold px-3 py-1.5 rounded-xl uppercase tracking-wider self-start sm:self-auto ${
-                    isExtinct ? 'bg-slate-800 text-white' :
-                    wbis.ndwiScore > 0.3 ? 'bg-emerald-600 text-white' :
-                    wbis.ndwiScore > 0.1 ? 'bg-sky-600 text-white' :
-                    wbis.ndwiScore > 0.0 ? 'bg-amber-600 text-white' :
-                    'bg-rose-600 text-white'
-                  }`}>
-                    {isExtinct ? 'MIT GAYA / EXTINCT BED' : wbis.ndwiScore > 0.2 ? 'VIBRANT WATER SPREAD' : 'DEPLETION ALERT'}
-                  </span>
-                </div>
+                  {/* Hill Spring Sanctuary Technical Specs */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                      <span className="text-[10px] font-mono text-slate-400 block uppercase font-bold">Hydrogeological Zone</span>
+                      <span className="text-xs font-bold text-slate-800 mt-1 block">Eastern Ghats Fracture Granulite</span>
+                      <span className="text-[11px] text-slate-500 mt-0.5 block">High Secondary Permeability</span>
+                    </div>
 
-                {/* Visual NDWI Gradient Bar */}
-                <div className="space-y-1.5">
-                  <div className="h-4 w-full rounded-full bg-gradient-to-r from-rose-600 via-amber-400 via-sky-400 to-emerald-600 relative overflow-visible">
-                    {/* Gauge Pin indicator */}
-                    {(() => {
-                      // Map -1 to +1 to 0% to 100%
-                      const percent = Math.max(0, Math.min(100, ((wbis.ndwiScore + 1) / 2) * 100));
-                      return (
-                        <div
-                          style={{ left: `${percent}%` }}
-                          className="absolute -top-1 transform -translate-x-1/2 w-3 h-6 bg-slate-950 border-2 border-white rounded-md shadow-md"
-                          title={`Current NDWI: ${wbis.ndwiScore}`}
-                        />
-                      );
-                    })()}
+                    <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                      <span className="text-[10px] font-mono text-slate-400 block uppercase font-bold">Natural Spring Discharge</span>
+                      <span className="text-xs font-bold text-blue-700 mt-1 block">140 - 180 Litres / Minute</span>
+                      <span className="text-[11px] text-slate-500 mt-0.5 block">Gravity fed perennial mountain stream</span>
+                    </div>
+
+                    <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                      <span className="text-[10px] font-mono text-slate-400 block uppercase font-bold">Aquifer Water Quality</span>
+                      <span className="text-xs font-bold text-emerald-700 mt-1 block">TDS: {waterBody.tdsPpm} ppm • Grade A</span>
+                      <span className="text-[11px] text-slate-500 mt-0.5 block">Pristine drinking mineral water</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Formula & Explanation */}
+                  <div className="bg-emerald-50/70 border border-emerald-200 p-4 rounded-2xl space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-mono font-bold text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
+                        <Gauge className="w-4 h-4 text-emerald-700" />
+                        <span>Normalized Difference Water Index (NDWI) Standard</span>
+                      </span>
+                      <span className="text-xs font-mono font-bold bg-white px-2 py-0.5 rounded border border-emerald-300 text-emerald-800">
+                        Formula: (Green - NIR) / (Green + NIR)
+                      </span>
+                    </div>
+                    <p className="text-xs text-emerald-950 leading-relaxed">
+                      ISRO Bhuvan WBIS utilizes multi-spectral optical reflectance. Open water bodies absorb Near-Infrared (NIR) radiation while reflecting Green light, resulting in high positive values (&gt;0.2). Silt-choked, dry, or encroached beds reflect high NIR and show negative NDWI values (&lt;0.0).
+                    </p>
                   </div>
 
-                  <div className="flex justify-between text-[10px] font-mono text-slate-500 pt-1">
-                    <span>-1.0 (Built-up / Concrete)</span>
-                    <span>-0.2 (Dry Soil / Extinct)</span>
-                    <span>0.0 (Marsh / Mud)</span>
-                    <span>+0.3 (Shallow Water)</span>
-                    <span>+1.0 (Deep Pristine Water)</span>
+                  {/* NDWI Score Meter */}
+                  <div className="bg-white border border-slate-200 p-5 rounded-2xl space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block">Spectral Score Gauge</span>
+                        <div className="text-3xl font-black font-mono mt-1 flex items-baseline gap-2">
+                          <span className={
+                            wbis.ndwiScore > 0.3 ? 'text-emerald-600' :
+                            wbis.ndwiScore > 0.1 ? 'text-sky-600' :
+                            wbis.ndwiScore > 0.0 ? 'text-amber-600' :
+                            'text-rose-600'
+                          }>
+                            {wbis.ndwiScore > 0 ? `+${wbis.ndwiScore.toFixed(2)}` : wbis.ndwiScore.toFixed(2)}
+                          </span>
+                          <span className="text-sm font-sans font-medium text-slate-500">
+                            ({wbis.ndwiClassification})
+                          </span>
+                        </div>
+                      </div>
+
+                      <span className={`text-xs font-mono font-bold px-3 py-1.5 rounded-xl uppercase tracking-wider self-start sm:self-auto ${
+                        isExtinct ? 'bg-slate-800 text-white' :
+                        wbis.ndwiScore > 0.3 ? 'bg-emerald-600 text-white' :
+                        wbis.ndwiScore > 0.1 ? 'bg-sky-600 text-white' :
+                        wbis.ndwiScore > 0.0 ? 'bg-amber-600 text-white' :
+                        'bg-rose-600 text-white'
+                      }`}>
+                        {isExtinct ? 'MIT GAYA / EXTINCT BED' : wbis.ndwiScore > 0.2 ? 'VIBRANT WATER SPREAD' : 'DEPLETION ALERT'}
+                      </span>
+                    </div>
+
+                    {/* Visual NDWI Gradient Bar */}
+                    <div className="space-y-1.5">
+                      <div className="h-4 w-full rounded-full bg-gradient-to-r from-rose-600 via-amber-400 via-sky-400 to-emerald-600 relative overflow-visible">
+                        {(() => {
+                          const percent = Math.max(0, Math.min(100, ((wbis.ndwiScore + 1) / 2) * 100));
+                          return (
+                            <div
+                              style={{ left: `${percent}%` }}
+                              className="absolute -top-1 transform -translate-x-1/2 w-3 h-6 bg-slate-950 border-2 border-white rounded-md shadow-md"
+                              title={`Current NDWI: ${wbis.ndwiScore}`}
+                            />
+                          );
+                        })()}
+                      </div>
+
+                      <div className="flex justify-between text-[10px] font-mono text-slate-500 pt-1">
+                        <span>-1.0 (Built-up / Concrete)</span>
+                        <span>-0.2 (Dry Soil / Extinct)</span>
+                        <span>0.0 (Marsh / Mud)</span>
+                        <span>+0.3 (Shallow Water)</span>
+                        <span>+1.0 (Deep Pristine Water)</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </>
+              )}
 
               {/* 6-Month 15-Day Cycles Historical Trend */}
               <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-3">
@@ -453,11 +602,11 @@ export const BhuvanWbisDetailModal: React.FC<BhuvanWbisDetailModalProps> = ({
                 </h4>
                 <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-center text-xs">
                   {[
-                    { pass: 'Pass #1 (Jul 18)', score: isExtinct ? -0.22 : +0.48, status: isExtinct ? 'Dry' : 'High' },
-                    { pass: 'Pass #2 (Aug 02)', score: isExtinct ? -0.24 : +0.46, status: isExtinct ? 'Dry' : 'High' },
-                    { pass: 'Pass #3 (Aug 17)', score: isExtinct ? -0.25 : +0.42, status: isExtinct ? 'Dry' : 'Normal' },
-                    { pass: 'Pass #4 (Sep 01)', score: isExtinct ? -0.27 : +0.38, status: isExtinct ? 'Dry' : 'Normal' },
-                    { pass: 'Pass #5 (Sep 16)', score: isExtinct ? -0.28 : +0.35, status: isExtinct ? 'Dry' : 'Normal' },
+                    { pass: 'Pass #1 (Jul 18)', score: isExtinct ? -0.22 : isGroundwater ? 0.22 : +0.48, status: isExtinct ? 'Dry' : isGroundwater ? 'Pristine' : 'High' },
+                    { pass: 'Pass #2 (Aug 02)', score: isExtinct ? -0.24 : isGroundwater ? 0.23 : +0.46, status: isExtinct ? 'Dry' : isGroundwater ? 'Pristine' : 'High' },
+                    { pass: 'Pass #3 (Aug 17)', score: isExtinct ? -0.25 : isGroundwater ? 0.24 : +0.42, status: isExtinct ? 'Dry' : isGroundwater ? 'Pristine' : 'Normal' },
+                    { pass: 'Pass #4 (Sep 01)', score: isExtinct ? -0.27 : isGroundwater ? 0.24 : +0.38, status: isExtinct ? 'Dry' : isGroundwater ? 'Stable' : 'Normal' },
+                    { pass: 'Pass #5 (Sep 16)', score: isExtinct ? -0.28 : isGroundwater ? 0.24 : +0.35, status: isExtinct ? 'Dry' : isGroundwater ? 'Stable' : 'Normal' },
                     { pass: 'Pass #6 (Oct 02)', score: wbis.ndwiScore, status: isExtinct ? 'Extinct' : 'Current' },
                   ].map((cycle, i) => (
                     <div key={i} className={`p-2.5 rounded-xl border ${

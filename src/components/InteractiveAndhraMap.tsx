@@ -1132,13 +1132,19 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
           {/* ============================================================== */}
           {(() => {
             const rawWbis = activeWaterBody.bhuvanWbis;
+            const isGroundwater = activeWaterBody.datasetType === 'groundwater' || activeWaterBody.type === 'Groundwater Well';
+            const isRiver = activeWaterBody.datasetType === 'river_level' || activeWaterBody.datasetType === 'river_discharge' || activeWaterBody.datasetType === 'basin_river_level' || activeWaterBody.datasetType === 'basin_river_discharge' || activeWaterBody.type === 'River' || activeWaterBody.type === 'Canal';
+            const isRainfall = activeWaterBody.datasetType === 'rainfall' || activeWaterBody.datasetType === 'basin_rainfall' || activeWaterBody.type === 'Rainfall Station';
+
             const wbis = {
               ndwiScore: typeof rawWbis?.ndwiScore === 'number' 
                 ? rawWbis.ndwiScore 
-                : activeWaterBody.statusColor === 'grey' ? -0.28 : activeWaterBody.statusColor === 'green' ? 0.44 : activeWaterBody.statusColor === 'blue' ? 0.28 : activeWaterBody.statusColor === 'yellow' ? 0.14 : -0.06,
+                : activeWaterBody.statusColor === 'grey' ? -0.28 : isGroundwater ? 0.24 : activeWaterBody.statusColor === 'green' ? 0.44 : activeWaterBody.statusColor === 'blue' ? 0.28 : activeWaterBody.statusColor === 'yellow' ? 0.14 : -0.06,
               ndwiClassification: rawWbis?.ndwiClassification || (
                 activeWaterBody.statusColor === 'grey' 
                   ? 'Extinct / Encroached / Built-up (< -0.15)' 
+                  : isGroundwater
+                  ? 'Active Hill Spring & Aquifer Head (0.24 NDMI)'
                   : activeWaterBody.statusColor === 'green' 
                   ? 'Deep Surface Water (NDWI > 0.3)' 
                   : activeWaterBody.statusColor === 'blue' 
@@ -1147,33 +1153,58 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
               ),
               waterSpreadAreaHa: typeof rawWbis?.waterSpreadAreaHa === 'number'
                 ? rawWbis.waterSpreadAreaHa
-                : activeWaterBody.statusColor === 'grey' ? 0.0 : Math.round((activeWaterBody.waterLevelPercent * 0.45 + 5) * 10) / 10,
+                : isGroundwater ? 14.8 : activeWaterBody.statusColor === 'grey' ? 0.0 : Math.round((activeWaterBody.waterLevelPercent * 0.45 + 5) * 10) / 10,
               historicalBaselineHa: typeof rawWbis?.historicalBaselineHa === 'number'
                 ? rawWbis.historicalBaselineHa
-                : activeWaterBody.statusColor === 'grey' ? 18.5 : Math.round((activeWaterBody.waterLevelPercent * 0.5 + 8) * 10) / 10,
+                : isGroundwater ? 14.8 : activeWaterBody.statusColor === 'grey' ? 18.5 : Math.round((activeWaterBody.waterLevelPercent * 0.5 + 8) * 10) / 10,
               areaChangePercent: typeof rawWbis?.areaChangePercent === 'number'
                 ? rawWbis.areaChangePercent
-                : activeWaterBody.statusColor === 'grey' ? -100 : activeWaterBody.waterLevelPercent > 60 ? +4.2 : -18.5,
-              satelliteMission: rawWbis?.satelliteMission || 'ISRO Resourcesat-2A (AWiFS 56m) & Sentinel-2 Optical',
-              sensorName: rawWbis?.sensorName || 'AWiFS (56m Swath) + Sentinel-2 MSI (10m Multi-spectral)',
+                : activeWaterBody.statusColor === 'grey' ? -100 : isGroundwater ? +1.4 : activeWaterBody.waterLevelPercent > 60 ? +4.2 : -18.5,
+              satelliteMission: rawWbis?.satelliteMission || (isGroundwater ? 'ISRO Resourcesat-2A (LISS-IV 5.8m) & Sentinel-2' : 'ISRO Resourcesat-2A (AWiFS 56m) & Sentinel-2 Optical'),
+              sensorName: rawWbis?.sensorName || (isGroundwater ? 'LISS-IV High-Res (5.8m) + Hydrogeological Lineament Mapping' : 'AWiFS (56m Swath) + Sentinel-2 MSI (10m Multi-spectral)'),
               last15DayPassDate: rawWbis?.last15DayPassDate || '2026-10-02',
               previousPassDate: rawWbis?.previousPassDate || '2026-09-17',
               nextPassDate: rawWbis?.nextPassDate || '2026-10-17',
               cycleDays: rawWbis?.cycleDays || 15,
-              cloudCoverPercent: rawWbis?.cloudCoverPercent || 3.4,
+              cloudCoverPercent: rawWbis?.cloudCoverPercent || (isGroundwater ? 2.1 : 3.4),
               siltationIndexPercent: typeof rawWbis?.siltationIndexPercent === 'number'
                 ? rawWbis.siltationIndexPercent
-                : activeWaterBody.statusColor === 'grey' ? 96 : activeWaterBody.statusColor === 'red' ? 74 : activeWaterBody.statusColor === 'yellow' ? 42 : 14,
-              encroachmentRisk: rawWbis?.encroachmentRisk || (activeWaterBody.statusColor === 'grey' ? 'Total Extinction' : activeWaterBody.statusColor === 'red' ? 'Severe' : activeWaterBody.statusColor === 'yellow' ? 'Moderate' : 'None'),
+                : isGroundwater ? 0 : activeWaterBody.statusColor === 'grey' ? 96 : activeWaterBody.statusColor === 'red' ? 74 : activeWaterBody.statusColor === 'yellow' ? 42 : 14,
+              encroachmentRisk: rawWbis?.encroachmentRisk || (isGroundwater ? 'None' : activeWaterBody.statusColor === 'grey' ? 'Total Extinction' : activeWaterBody.statusColor === 'red' ? 'Severe' : activeWaterBody.statusColor === 'yellow' ? 'Moderate' : 'None'),
               waterRemainingPercent: typeof rawWbis?.waterRemainingPercent === 'number' ? rawWbis.waterRemainingPercent : activeWaterBody.waterLevelPercent,
               estimatedVolumeMCM: typeof rawWbis?.estimatedVolumeMCM === 'number'
                 ? rawWbis.estimatedVolumeMCM
-                : activeWaterBody.liveTelemetry?.storageMCM || Math.round((activeWaterBody.waterLevelPercent * 0.3) * 10) / 10,
+                : isGroundwater ? 1.8 : activeWaterBody.liveTelemetry?.storageMCM || Math.round((activeWaterBody.waterLevelPercent * 0.3) * 10) / 10,
               isExtinct: activeWaterBody.statusColor === 'grey' || rawWbis?.isExtinct || false,
               extinctionReason: rawWbis?.extinctionReason || (activeWaterBody.statusColor === 'grey' ? 'Talab sookh kar mit gaya: severe siltation deposition, unauthorized construction encroachment, and feeder canal diversion.' : undefined),
             };
 
             const isExtinct = activeWaterBody.statusColor === 'grey' || wbis.isExtinct;
+
+            // Dynamic header and theme titles based on asset hydrogeology
+            const systemTitle = isGroundwater 
+              ? 'Bhuvan Groundwater Information System (GWIS) & Hill Spring Hydrology'
+              : isRiver 
+              ? 'Bhuvan Fluvial Hydrology & River Basin Telemetry (CWC / WRIS)'
+              : isRainfall 
+              ? 'Bhuvan Hydro-Meteorological & Precipitation Telemetry (IMD / ISRO)'
+              : 'Bhuvan Water Bodies Information System (WBIS)';
+
+            const systemBadge = isGroundwater 
+              ? 'ISRO DWLR & Aquifer Telemetry'
+              : isRiver 
+              ? 'ISRO River Basin Telemetry'
+              : isRainfall 
+              ? 'ISRO AWS Rain Telemetry'
+              : 'ISRO 15-Day Optical Pass';
+
+            const modalButtonText = isGroundwater 
+              ? 'Full Technical Bhuvan GWIS / Spring Modal'
+              : isRiver 
+              ? 'Full Technical River Basin Telemetry Modal'
+              : isRainfall 
+              ? 'Full Technical AWS Precipitation Modal'
+              : 'Full Technical Bhuvan WBIS Modal';
 
             return (
               <div className="mt-4 border border-indigo-200 rounded-2xl bg-gradient-to-b from-indigo-50/60 via-white to-slate-50 overflow-hidden shadow-xs space-y-4 p-4 sm:p-5">
@@ -1185,13 +1216,14 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
                     </div>
                     <div>
                       <h4 className="text-sm font-extrabold text-slate-900 flex items-center gap-2 flex-wrap">
-                        <span>Bhuvan Water Bodies Information System (WBIS)</span>
+                        <span>{systemTitle}</span>
                         <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-bold border border-indigo-300">
-                          ISRO 15-Day Optical Pass
+                          {systemBadge}
                         </span>
                       </h4>
                       <p className="text-[11px] text-slate-500 font-medium">
                         Satellite: <strong>{wbis.satelliteMission}</strong> • Telemetry Grid: <strong>{activeWaterBody.district}</strong>
+                        {isGroundwater && ' • CGWB Eastern Ghats Aquifer'}
                       </p>
                     </div>
                   </div>
@@ -1202,7 +1234,7 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
                       className="px-3.5 py-2 bg-gradient-to-r from-[#0047ab] to-[#0284c7] hover:from-blue-700 hover:to-sky-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-transform active:scale-95 shadow-xs cursor-pointer"
                     >
                       <Eye className="w-3.5 h-3.5 text-amber-300" />
-                      <span>Full Technical Bhuvan WBIS Modal</span>
+                      <span>{modalButtonText}</span>
                       <ChevronRight className="w-3.5 h-3.5" />
                     </button>
 
@@ -1260,7 +1292,11 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
                       <span>{wbis.previousPassDate}</span>
                     </span>
                     <p className="text-[11px] text-slate-500 mt-1">
-                      {isExtinct ? 'Optical reflectance showed dry soil matrix.' : 'Historical reflectance baseline recorded under clear sky.'}
+                      {isExtinct 
+                        ? 'Optical reflectance showed dry soil matrix.' 
+                        : isGroundwater
+                        ? 'Sub-surface aquifer recharge & spring moisture baseline verified.'
+                        : 'Historical reflectance baseline recorded under clear sky.'}
                     </p>
                   </div>
 
@@ -1279,6 +1315,10 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
                     <p className="text-[11px] text-blue-900 mt-1">
                       {isExtinct 
                         ? 'NDWI: ' + wbis.ndwiScore + ' (No water detected - Dry/Encroached signature)'
+                        : isGroundwater
+                        ? `DWLR: ${activeWaterBody.liveTelemetry?.depthToWaterM_bgl ?? 6.8}m bgl • Trend: ${activeWaterBody.liveTelemetry?.rechargeTrend ?? '+1.4m'} • Catchment: ${wbis.waterSpreadAreaHa} Ha`
+                        : isRiver
+                        ? `Level: ${activeWaterBody.liveTelemetry?.waterLevelM ?? 14.8}m • Flow: ${activeWaterBody.liveTelemetry?.dischargeCusecs ? `${activeWaterBody.liveTelemetry.dischargeCusecs} Cusecs` : 'Standard'}`
                         : `NDWI: ${wbis.ndwiScore > 0 ? `+${wbis.ndwiScore}` : wbis.ndwiScore} • Spread: ${wbis.waterSpreadAreaHa} Ha (${wbis.waterRemainingPercent}% volume)`}
                     </p>
                   </div>
@@ -1293,19 +1333,23 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
                       <span>{wbis.nextPassDate}</span>
                     </span>
                     <p className="text-[11px] text-slate-500 mt-1">
-                      ISRO satellite will re-image catchment in ~14 days for automatic change detection.
+                      {isGroundwater
+                        ? 'ISRO LISS-IV will scan Eastern Ghats recharge zone canopy & sub-surface moisture in ~14 days.'
+                        : 'ISRO satellite will re-image catchment in ~14 days for automatic change detection.'}
                     </p>
                   </div>
                 </div>
 
-                {/* 4. NDWI Spectral Analytics Bar & Volume Metrics */}
+                {/* 4. NDWI / Hydrogeology Spectral Analytics Bar & Volume Metrics */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-1">
-                  {/* Left: NDWI Score Meter */}
+                  {/* Left: NDWI / NDMI Score Meter */}
                   <div className="bg-white border border-slate-200 p-4 rounded-xl space-y-3 shadow-2xs">
                     <div className="flex items-center justify-between">
                       <div>
                         <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block font-bold">
-                          NDWI Water Index Score: (Green - NIR) / (Green + NIR)
+                          {isGroundwater 
+                            ? 'Catchment Moisture & Soil Index (NDMI / Lineament Reflectance)'
+                            : 'NDWI Water Index Score: (Green - NIR) / (Green + NIR)'}
                         </span>
                         <div className="text-2xl font-black font-mono mt-0.5 flex items-baseline gap-2">
                           <span className={
@@ -1324,9 +1368,10 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
 
                       <span className={`text-[11px] font-mono font-bold px-2.5 py-1 rounded-lg uppercase tracking-wider ${
                         isExtinct ? 'bg-slate-700 text-white' :
+                        isGroundwater ? 'bg-emerald-700 text-white' :
                         wbis.ndwiScore > 0.2 ? 'bg-emerald-600 text-white' : 'bg-amber-600 text-white'
                       }`}>
-                        {isExtinct ? 'SOOKH KAR MIT GAYA' : wbis.ndwiScore > 0.2 ? 'SURFACE WATER' : 'DEPLETION'}
+                        {isExtinct ? 'SOOKH KAR MIT GAYA' : isGroundwater ? 'PRISTINE SPRING HYDROLOGY' : wbis.ndwiScore > 0.2 ? 'SURFACE WATER' : 'DEPLETION'}
                       </span>
                     </div>
 
@@ -1339,7 +1384,7 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
                             <div
                               style={{ left: `${percent}%` }}
                               className="absolute -top-1 transform -translate-x-1/2 w-3 h-5.5 bg-slate-950 border-2 border-white rounded shadow-md"
-                              title={`NDWI: ${wbis.ndwiScore}`}
+                              title={`Index: ${wbis.ndwiScore}`}
                             />
                           );
                         })()}
@@ -1348,50 +1393,158 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
                         <span>-1.0 (Built-up)</span>
                         <span>-0.2 (Sookh Gaya)</span>
                         <span>0.0 (Marsh)</span>
-                        <span>+0.3 (Water)</span>
-                        <span>+1.0 (Deep)</span>
+                        <span>+0.3 (Active Recharge)</span>
+                        <span>+1.0 (Pristine Spring)</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Right: 4 Water Spread & Siltation Stats */}
+                  {/* Right: 4 Hydrogeological / Water Spread Stats */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2.5">
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                      <span className="text-[10px] font-mono text-slate-400 block uppercase">Current Water Spread</span>
-                      <span className="text-base font-bold font-mono text-slate-900 mt-0.5 block">
-                        {wbis.waterSpreadAreaHa} <span className="text-xs font-sans text-slate-500">Ha</span>
-                      </span>
-                      <span className="text-[10px] text-slate-500">{(wbis.waterSpreadAreaHa * 2.471).toFixed(1)} Acres</span>
-                    </div>
+                    {isGroundwater ? (
+                      <>
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                          <span className="text-[10px] font-mono text-slate-400 block uppercase">Spring Catchment Zone</span>
+                          <span className="text-base font-bold font-mono text-slate-900 mt-0.5 block">
+                            {wbis.waterSpreadAreaHa} <span className="text-xs font-sans text-slate-500">Ha</span>
+                          </span>
+                          <span className="text-[10px] text-slate-500">Eastern Ghats Protected Zone</span>
+                        </div>
 
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                      <span className="text-[10px] font-mono text-slate-400 block uppercase">Baseline Area (2015)</span>
-                      <span className="text-base font-bold font-mono text-slate-900 mt-0.5 block">
-                        {wbis.historicalBaselineHa} <span className="text-xs font-sans text-slate-500">Ha</span>
-                      </span>
-                      <span className={`text-[10px] font-bold ${wbis.areaChangePercent >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                        {wbis.areaChangePercent >= 0 ? `+${wbis.areaChangePercent}%` : `${wbis.areaChangePercent}%`} Change
-                      </span>
-                    </div>
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                          <span className="text-[10px] font-mono text-slate-400 block uppercase">DWLR Water Depth</span>
+                          <span className="text-base font-bold font-mono text-slate-900 mt-0.5 block">
+                            {activeWaterBody.liveTelemetry?.depthToWaterM_bgl ?? 6.8} <span className="text-xs font-sans text-slate-500">m bgl</span>
+                          </span>
+                          <span className="text-[10px] font-bold text-emerald-600">
+                            {activeWaterBody.liveTelemetry?.rechargeTrend ?? '+1.4m Rising'} Trend
+                          </span>
+                        </div>
 
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                      <span className="text-[10px] font-mono text-slate-400 block uppercase">Water Remaining</span>
-                      <span className="text-base font-bold font-mono text-slate-900 mt-0.5 block">
-                        {wbis.waterRemainingPercent}%
-                      </span>
-                      <span className="text-[10px] text-slate-500">{wbis.estimatedVolumeMCM} MCM Storage</span>
-                    </div>
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                          <span className="text-[10px] font-mono text-slate-400 block uppercase">Dynamic Aquifer Head</span>
+                          <span className="text-base font-bold font-mono text-slate-900 mt-0.5 block">
+                            {activeWaterBody.waterLevelPercent}%
+                          </span>
+                          <span className="text-[10px] text-slate-500">TDS: {activeWaterBody.tdsPpm} ppm (Crystal Pure)</span>
+                        </div>
 
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                      <span className="text-[10px] font-mono text-slate-400 block uppercase">Siltation / Choke</span>
-                      <span className={`text-base font-bold font-mono mt-0.5 block ${
-                        wbis.siltationIndexPercent > 70 ? 'text-rose-600' :
-                        wbis.siltationIndexPercent > 35 ? 'text-amber-600' : 'text-emerald-600'
-                      }`}>
-                        {wbis.siltationIndexPercent}%
-                      </span>
-                      <span className="text-[10px] text-slate-500">Bed Silt Accumulation</span>
-                    </div>
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                          <span className="text-[10px] font-mono text-slate-400 block uppercase">Catchment Protection</span>
+                          <span className="text-base font-bold font-mono mt-0.5 block text-emerald-600">
+                            100% Intact
+                          </span>
+                          <span className="text-[10px] text-slate-500">Sacred Grove Sanctuary</span>
+                        </div>
+                      </>
+                    ) : isRiver ? (
+                      <>
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                          <span className="text-[10px] font-mono text-slate-400 block uppercase">Gauge Water Level</span>
+                          <span className="text-base font-bold font-mono text-slate-900 mt-0.5 block">
+                            {activeWaterBody.liveTelemetry?.waterLevelM ?? 14.8} <span className="text-xs font-sans text-slate-500">m</span>
+                          </span>
+                          <span className="text-[10px] text-slate-500">Danger: {activeWaterBody.liveTelemetry?.dangerLevelM ?? 18.0} m</span>
+                        </div>
+
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                          <span className="text-[10px] font-mono text-slate-400 block uppercase">River Discharge</span>
+                          <span className="text-base font-bold font-mono text-slate-900 mt-0.5 block">
+                            {activeWaterBody.liveTelemetry?.dischargeCusecs ? `${activeWaterBody.liveTelemetry.dischargeCusecs}` : '340'} <span className="text-xs font-sans text-slate-500">Cusecs</span>
+                          </span>
+                          <span className="text-[10px] font-bold text-sky-600">Active Fluvial Flow</span>
+                        </div>
+
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                          <span className="text-[10px] font-mono text-slate-400 block uppercase">Dynamic Stage</span>
+                          <span className="text-base font-bold font-mono text-slate-900 mt-0.5 block">
+                            {activeWaterBody.waterLevelPercent}%
+                          </span>
+                          <span className="text-[10px] text-slate-500">Catchment Hydraulic State</span>
+                        </div>
+
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                          <span className="text-[10px] font-mono text-slate-400 block uppercase">Sediment Index</span>
+                          <span className={`text-base font-bold font-mono mt-0.5 block ${wbis.siltationIndexPercent > 40 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                            {wbis.siltationIndexPercent}%
+                          </span>
+                          <span className="text-[10px] text-slate-500">Fluvial Silt Load</span>
+                        </div>
+                      </>
+                    ) : isRainfall ? (
+                      <>
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                          <span className="text-[10px] font-mono text-slate-400 block uppercase">AWS Rainfall</span>
+                          <span className="text-base font-bold font-mono text-slate-900 mt-0.5 block">
+                            {activeWaterBody.liveTelemetry?.rainfallMm ?? 24.5} <span className="text-xs font-sans text-slate-500">mm</span>
+                          </span>
+                          <span className="text-[10px] text-slate-500">Telemetry AWS IMD</span>
+                        </div>
+
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                          <span className="text-[10px] font-mono text-slate-400 block uppercase">Departure</span>
+                          <span className="text-base font-bold font-mono text-emerald-600 mt-0.5 block">
+                            {activeWaterBody.liveTelemetry?.departurePercent ? `+${activeWaterBody.liveTelemetry.departurePercent}%` : '+14.2%'}
+                          </span>
+                          <span className="text-[10px] text-slate-500">Normal / Excess Rain</span>
+                        </div>
+
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                          <span className="text-[10px] font-mono text-slate-400 block uppercase">Soil Saturation</span>
+                          <span className="text-base font-bold font-mono text-slate-900 mt-0.5 block">
+                            {activeWaterBody.waterLevelPercent}%
+                          </span>
+                          <span className="text-[10px] text-slate-500">Hill Basin Runoff</span>
+                        </div>
+
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                          <span className="text-[10px] font-mono text-slate-400 block uppercase">AWS Status</span>
+                          <span className="text-base font-bold font-mono text-emerald-600 mt-0.5 block">
+                            Online
+                          </span>
+                          <span className="text-[10px] text-slate-500">Satellite Synced</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                          <span className="text-[10px] font-mono text-slate-400 block uppercase">Current Water Spread</span>
+                          <span className="text-base font-bold font-mono text-slate-900 mt-0.5 block">
+                            {wbis.waterSpreadAreaHa} <span className="text-xs font-sans text-slate-500">Ha</span>
+                          </span>
+                          <span className="text-[10px] text-slate-500">{(wbis.waterSpreadAreaHa * 2.471).toFixed(1)} Acres</span>
+                        </div>
+
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                          <span className="text-[10px] font-mono text-slate-400 block uppercase">Baseline Area (2015)</span>
+                          <span className="text-base font-bold font-mono text-slate-900 mt-0.5 block">
+                            {wbis.historicalBaselineHa} <span className="text-xs font-sans text-slate-500">Ha</span>
+                          </span>
+                          <span className={`text-[10px] font-bold ${wbis.areaChangePercent >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                            {wbis.areaChangePercent >= 0 ? `+${wbis.areaChangePercent}%` : `${wbis.areaChangePercent}%`} Change
+                          </span>
+                        </div>
+
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                          <span className="text-[10px] font-mono text-slate-400 block uppercase">Water Remaining</span>
+                          <span className="text-base font-bold font-mono text-slate-900 mt-0.5 block">
+                            {wbis.waterRemainingPercent}%
+                          </span>
+                          <span className="text-[10px] text-slate-500">{wbis.estimatedVolumeMCM} MCM Storage</span>
+                        </div>
+
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                          <span className="text-[10px] font-mono text-slate-400 block uppercase">Siltation / Choke</span>
+                          <span className={`text-base font-bold font-mono mt-0.5 block ${
+                            wbis.siltationIndexPercent > 70 ? 'text-rose-600' :
+                            wbis.siltationIndexPercent > 35 ? 'text-amber-600' : 'text-emerald-600'
+                          }`}>
+                            {wbis.siltationIndexPercent}%
+                          </span>
+                          <span className="text-[10px] text-slate-500">Bed Silt Accumulation</span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -1407,11 +1560,11 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
 
                   <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-center text-xs">
                     {[
-                      { pass: 'Pass #1 (Jul 18)', score: isExtinct ? -0.22 : +0.48, status: isExtinct ? 'Dry' : 'High' },
-                      { pass: 'Pass #2 (Aug 02)', score: isExtinct ? -0.24 : +0.46, status: isExtinct ? 'Dry' : 'High' },
-                      { pass: 'Pass #3 (Aug 17)', score: isExtinct ? -0.25 : +0.42, status: isExtinct ? 'Dry' : 'Normal' },
-                      { pass: 'Pass #4 (Sep 01)', score: isExtinct ? -0.27 : +0.38, status: isExtinct ? 'Dry' : 'Normal' },
-                      { pass: 'Pass #5 (Sep 16)', score: isExtinct ? -0.28 : +0.35, status: isExtinct ? 'Dry' : 'Normal' },
+                      { pass: 'Pass #1 (Jul 18)', score: isExtinct ? -0.22 : isGroundwater ? 0.22 : +0.48, status: isExtinct ? 'Dry' : isGroundwater ? 'Pristine' : 'High' },
+                      { pass: 'Pass #2 (Aug 02)', score: isExtinct ? -0.24 : isGroundwater ? 0.23 : +0.46, status: isExtinct ? 'Dry' : isGroundwater ? 'Pristine' : 'High' },
+                      { pass: 'Pass #3 (Aug 17)', score: isExtinct ? -0.25 : isGroundwater ? 0.24 : +0.42, status: isExtinct ? 'Dry' : isGroundwater ? 'Stable' : 'Normal' },
+                      { pass: 'Pass #4 (Sep 01)', score: isExtinct ? -0.27 : isGroundwater ? 0.24 : +0.38, status: isExtinct ? 'Dry' : isGroundwater ? 'Stable' : 'Normal' },
+                      { pass: 'Pass #5 (Sep 16)', score: isExtinct ? -0.28 : isGroundwater ? 0.24 : +0.35, status: isExtinct ? 'Dry' : isGroundwater ? 'Stable' : 'Normal' },
                       { pass: 'Pass #6 (Oct 02)', score: wbis.ndwiScore, status: isExtinct ? 'Extinct' : 'Current' },
                     ].map((cycle, i) => (
                       <div key={i} className={`p-2 rounded-xl border ${
@@ -1437,8 +1590,9 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
       {/* ============================================================== */}
       {/* 5. INDIA WRIS LIVE TELEMETRY STATION FEED (ALL 9 ENDPOINTS)    */}
       {/* ============================================================== */}
-      <div className="border-t border-slate-200 bg-slate-900 text-white p-4 sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+      {currentRole !== 'admin' && (
+        <div className="border-t border-slate-200 bg-slate-900 text-white p-4 sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-xs">
               <Database className="w-4 h-4" />
@@ -1731,6 +1885,7 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
           )}
         </div>
       </div>
+      )}
 
       {/* 6. Bhuvan WBIS Detailed Satellite & Field Telemetry Inspector Modal */}
       <BhuvanWbisDetailModal

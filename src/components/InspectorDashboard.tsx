@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { CitizenComplaint, InspectorReport, WaterBody } from '../types/nirikshan';
 import { 
   UserCheck, 
@@ -15,7 +15,13 @@ import {
   Clock,
   Sparkles,
   Search,
-  ExternalLink
+  ExternalLink,
+  RefreshCw,
+  Trash2,
+  Link2,
+  Check,
+  FileCheck,
+  Image as ImageIcon
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -40,6 +46,12 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({
   const [selectedComplaint, setSelectedComplaint] = useState<CitizenComplaint | null>(null);
   const [selectedVerificationComplaint, setSelectedVerificationComplaint] = useState<CitizenComplaint | null>(null);
 
+  // Hidden native file and camera refs for bulletproof triggering
+  const siteFileInputRef = useRef<HTMLInputElement>(null);
+  const siteCameraInputRef = useRef<HTMLInputElement>(null);
+  const verificationFileInputRef = useRef<HTMLInputElement>(null);
+  const verificationCameraInputRef = useRef<HTMLInputElement>(null);
+
   // Inspection Form States
   const [gps, setGps] = useState<{ lat: number; lng: number }>({ lat: 18.1695, lng: 83.4688 });
   const [isFetchingGps, setIsFetchingGps] = useState(false);
@@ -48,9 +60,9 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({
   const [wasteType, setWasteType] = useState<InspectorReport['wasteType']>('Plastic & Polythene');
   const [sourcePinDescription, setSourcePinDescription] = useState('');
   const [tdsReadingPpm, setTdsReadingPpm] = useState<number>(650);
-  const [sitePhotoUrl, setSitePhotoUrl] = useState(
-    'https://images.unsplash.com/photo-1541888946425-d0fbb18f15f7?auto=format&fit=crop&w=600&q=80'
-  );
+  const [sitePhotoUrl, setSitePhotoUrl] = useState<string>('');
+  const [manualPhotoUrl, setManualPhotoUrl] = useState('');
+  const [isDraggingSitePhoto, setIsDraggingSitePhoto] = useState(false);
   const [isComplaintValid, setIsComplaintValid] = useState(true);
   const [validationRemarks, setValidationRemarks] = useState('');
 
@@ -59,6 +71,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({
   const [verificationPhotoUrl, setVerificationPhotoUrl] = useState(
     'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80'
   );
+  const [manualVerificationUrl, setManualVerificationUrl] = useState('');
   const [verificationRemarks, setVerificationRemarks] = useState('');
 
   // Filter tasks
@@ -96,11 +109,36 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({
     }
   };
 
+  const handleSitePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSitePhotoUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleVerificationPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setVerificationPhotoUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleOpenInspectionModal = (c: CitizenComplaint) => {
     setSelectedComplaint(c);
     setGps(c.coordinates);
     setSourcePinDescription(`Upstream inflow canal at ${c.locationLandmark}`);
     setValidationRemarks(`Site verified on ground. Citizen complaint authentic and requires immediate intervention.`);
+    setSitePhotoUrl('');
+    setManualPhotoUrl('');
+    setIsDraggingSitePhoto(false);
   };
 
   const handleSubmitInspection = (e: React.FormEvent) => {
@@ -121,7 +159,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({
       wasteType,
       sourcePinDescription,
       tdsReadingPpm,
-      sitePhotoUrl,
+      sitePhotoUrl: sitePhotoUrl || selectedComplaint.photoUrl || 'https://images.unsplash.com/photo-1541888946425-d0fbb18f15f7?auto=format&fit=crop&w=600&q=80',
       isComplaintValid,
       validationRemarks,
     };
@@ -224,10 +262,10 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({
 
                   <button
                     onClick={() => handleOpenInspectionModal(c)}
-                    className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs shadow-xs flex items-center justify-center gap-1.5 transition-colors"
+                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs shadow-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <Activity className="w-4 h-4" />
-                    <span>Conduct Field Inspection & Log TDS (तनिखी करें)</span>
+                    <span>Conduct Field Investigation & Log TDS (स्थल जांच एवं रिपोर्ट)</span>
                   </button>
                 </div>
               ))
@@ -348,11 +386,240 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({
                 <button
                   type="button"
                   onClick={handleFetchGps}
-                  className="px-3 py-1.5 bg-[#0047ab] text-white rounded-lg font-bold text-xs flex items-center gap-1"
+                  className="px-3 py-1.5 bg-[#0047ab] text-white rounded-lg font-bold text-xs flex items-center gap-1 cursor-pointer"
                 >
                   <MapPin className="w-3.5 h-3.5" />
                   <span>{isFetchingGps ? 'Detecting...' : 'Re-Detect GPS'}</span>
                 </button>
+              </div>
+
+              {/* SECTION: Site Verified Image Upload (Mandatory Evidence) */}
+              <div className="bg-emerald-50/80 border-2 border-emerald-500/40 rounded-xl p-3.5 sm:p-4 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-200/70 pb-2.5">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="p-1 rounded-md bg-emerald-600 text-white">
+                        <Camera className="w-4 h-4" />
+                      </span>
+                      <h4 className="font-bold text-emerald-950 text-xs sm:text-sm">
+                        Site Verified Image Upload (स्थल सत्यापन फोटो अपलोड करें)
+                      </h4>
+                      <span className="bg-emerald-700 text-white text-[9px] font-mono uppercase px-2 py-0.5 rounded font-bold">
+                        Mandatory Proof
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-emerald-800 mt-0.5">
+                      Field investigation photo evidence is required for Nodal Officer & Action Engineer verification.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => siteFileInputRef.current?.click()}
+                      className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Upload Photo (फोटो चुनें)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => siteCameraInputRef.current?.click()}
+                      className="px-3 py-1.5 bg-[#0047ab] hover:bg-blue-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      <span>Camera (कैमरा)</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Native hidden inputs controlled by ref */}
+                <input
+                  ref={siteFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleSitePhotoUpload}
+                  className="sr-only"
+                />
+                <input
+                  ref={siteCameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleSitePhotoUpload}
+                  className="sr-only"
+                />
+
+                {/* Side-by-Side: Citizen Complaint vs Inspector Ground Verification */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Left: Citizen Complaint Photo Reference */}
+                  <div className="bg-white border border-slate-200 rounded-lg p-2.5">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-bold text-slate-600 uppercase flex items-center gap-1">
+                        <ImageIcon className="w-3 h-3 text-slate-400" />
+                        <span>1. Citizen Reported Photo</span>
+                      </span>
+                      <span className="text-[9px] text-slate-400 font-mono bg-slate-100 px-1.5 py-0.5 rounded">
+                        Reference
+                      </span>
+                    </div>
+                    <div className="relative h-36 rounded-lg overflow-hidden bg-slate-100 border border-slate-200">
+                      <img
+                        src={selectedComplaint.photoUrl || 'https://images.unsplash.com/photo-1541888946425-d0fbb18f15f7?auto=format&fit=crop&w=600&q=80'}
+                        alt="Citizen Report"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute bottom-1.5 left-1.5 bg-black/75 text-white text-[9px] px-2 py-0.5 rounded font-mono">
+                        CITIZEN GRIEVANCE #{selectedComplaint.id}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right: Inspector Ground-Verified Photo */}
+                  <div className="bg-white border border-slate-200 rounded-lg p-2.5 flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-bold text-emerald-800 uppercase flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        <span>2. Inspector Site Verified Photo</span>
+                      </span>
+                      {sitePhotoUrl ? (
+                        <span className="text-[9px] text-emerald-700 font-bold bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300">
+                          ✓ Attached
+                        </span>
+                      ) : (
+                        <span className="text-[9px] text-amber-700 font-bold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                          Required
+                        </span>
+                      )}
+                    </div>
+
+                    {sitePhotoUrl ? (
+                      <div className="relative h-36 rounded-lg overflow-hidden bg-slate-900 border-2 border-emerald-500 group">
+                        <img
+                          src={sitePhotoUrl}
+                          alt="Site Verified Evidence"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => siteFileInputRef.current?.click()}
+                            className="bg-white/95 hover:bg-white text-slate-900 text-[10px] font-bold px-2.5 py-1 rounded shadow-sm flex items-center gap-1 cursor-pointer"
+                          >
+                            <RefreshCw className="w-3 h-3 text-blue-600" />
+                            <span>Change</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSitePhotoUrl('')}
+                            className="bg-rose-600/90 hover:bg-rose-700 text-white text-[10px] font-bold px-2.5 py-1 rounded shadow-sm flex items-center gap-1 cursor-pointer"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>Remove</span>
+                          </button>
+                        </div>
+                        <div className="absolute bottom-1.5 left-1.5 right-1.5 bg-emerald-950/85 text-emerald-200 text-[9px] px-2 py-0.5 rounded font-mono flex items-center justify-between">
+                          <span>GROUND VERIFIED • {gps.lat.toFixed(4)}°N</span>
+                          <span className="text-emerald-300 font-bold flex items-center gap-1">
+                            <Check className="w-3 h-3" /> READY
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        onDragOver={(e) => { e.preventDefault(); setIsDraggingSitePhoto(true); }}
+                        onDragLeave={() => setIsDraggingSitePhoto(false)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setIsDraggingSitePhoto(false);
+                          const file = e.dataTransfer.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => setSitePhotoUrl(reader.result as string);
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                        onClick={() => siteFileInputRef.current?.click()}
+                        className={`h-36 border-2 border-dashed rounded-lg flex flex-col items-center justify-center p-3 text-center cursor-pointer transition-colors ${
+                          isDraggingSitePhoto
+                            ? 'border-emerald-500 bg-emerald-100/70'
+                            : 'border-emerald-300 bg-emerald-50/50 hover:bg-emerald-100/40'
+                        }`}
+                      >
+                        <Camera className="w-8 h-8 text-emerald-600 mb-1.5 animate-pulse" />
+                        <span className="text-xs font-bold text-emerald-900 block">
+                          Click to Upload Site Verified Image
+                        </span>
+                        <span className="text-[10px] text-emerald-700 mt-0.5">
+                          Or drag and drop photo file here (JPG, PNG, WEBP)
+                        </span>
+                        <div className="mt-2 flex items-center gap-1.5 text-[9px] font-semibold text-emerald-800 bg-white/80 px-2 py-0.5 rounded-full border border-emerald-200">
+                          <Upload className="w-2.5 h-2.5" />
+                          <span>Tap here to browse file from device</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Paste Image URL & Quick Sample Presets */}
+                <div className="pt-2 border-t border-emerald-200/70 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <Link2 className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="url"
+                        placeholder="Or paste site verified image URL (या फोटो का वेब लिंक डालें)..."
+                        value={manualPhotoUrl}
+                        onChange={(e) => setManualPhotoUrl(e.target.value)}
+                        className="w-full pl-8 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (manualPhotoUrl.trim()) {
+                          setSitePhotoUrl(manualPhotoUrl.trim());
+                          setManualPhotoUrl('');
+                        }
+                      }}
+                      disabled={!manualPhotoUrl.trim()}
+                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 disabled:opacity-40 text-white font-bold rounded-lg text-xs cursor-pointer transition-colors"
+                    >
+                      Set URL
+                    </button>
+                    {selectedComplaint.photoUrl && !sitePhotoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setSitePhotoUrl(selectedComplaint.photoUrl || '')}
+                        className="px-2.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-semibold rounded-lg text-xs cursor-pointer transition-colors whitespace-nowrap"
+                        title="Use Citizen Photo as Ground Verification Basis"
+                      >
+                        Use Citizen Photo
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-slate-600">Quick Evidence Presets:</span>
+                    {[
+                      { label: 'Sample 1: Heavy Silt & Waste', url: 'https://images.unsplash.com/photo-1530587191325-3db32d826c18?auto=format&fit=crop&w=600&q=80' },
+                      { label: 'Sample 2: Canal Inflow Drain', url: 'https://images.unsplash.com/photo-1541888946425-d0fbb18f15f7?auto=format&fit=crop&w=600&q=80' },
+                      { label: 'Sample 3: Choked Tank Bed', url: 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=600&q=80' },
+                      { label: 'Sample 4: Clear Water Spring', url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80' },
+                    ].map((p, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setSitePhotoUrl(p.url)}
+                        className="text-[10px] font-semibold px-2 py-0.5 rounded bg-white hover:bg-emerald-100 text-slate-700 hover:text-emerald-900 border border-slate-200 transition-colors cursor-pointer"
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* Water Presence & Waste Level */}
@@ -462,19 +729,6 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({
                 </div>
               </div>
 
-              {/* Site Photo */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-700 block">
-                  Inspector Site Verification Photo (तनिखी का फोटो प्रमाण)
-                </label>
-                <div className="relative h-28 w-full rounded-lg overflow-hidden border border-slate-300">
-                  <img src={sitePhotoUrl} alt="Inspection Photo" className="w-full h-full object-cover" />
-                  <span className="absolute bottom-1 left-1 bg-black/70 text-white text-[9px] font-mono px-2 py-0.5 rounded">
-                    OFFICIAL INSPECTION EVIDENCE
-                  </span>
-                </div>
-              </div>
-
               {/* Complaint Validity Check */}
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
                 <label className="text-[11px] font-bold text-slate-800 block">
@@ -581,13 +835,105 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({
               <div>
                 <label className="font-bold text-slate-700 block mb-1">Inspector Verification Remarks</label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   required
                   value={verificationRemarks}
                   onChange={(e) => setVerificationRemarks(e.target.value)}
                   placeholder="Describe ground verification: e.g. checked on site, desilting complete, water free of trash..."
                   className="w-full p-2 border border-slate-300 rounded-lg"
                 />
+              </div>
+
+              {/* Post-work verification photo upload */}
+              <div className="space-y-2 bg-slate-50 border border-slate-200 rounded-xl p-3.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                      <Camera className="w-3.5 h-3.5 text-emerald-700" />
+                      <span>Post-Work Site Verification Photo (सत्यापन फोटो)</span>
+                    </label>
+                    <span className="text-[10px] text-slate-500">
+                      Upload ground proof after engineer completed remediation work
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => verificationFileInputRef.current?.click()}
+                      className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-xs flex items-center gap-1 shadow-xs cursor-pointer"
+                    >
+                      <Upload className="w-3 h-3" />
+                      <span>Upload Photo</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => verificationCameraInputRef.current?.click()}
+                      className="px-2.5 py-1 bg-[#0047ab] hover:bg-blue-700 text-white font-bold rounded-lg text-xs flex items-center gap-1 shadow-xs cursor-pointer"
+                    >
+                      <Camera className="w-3 h-3" />
+                      <span>Camera</span>
+                    </button>
+                  </div>
+                </div>
+
+                <input
+                  ref={verificationFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleVerificationPhotoUpload}
+                  className="sr-only"
+                />
+                <input
+                  ref={verificationCameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleVerificationPhotoUpload}
+                  className="sr-only"
+                />
+
+                <div className="relative h-32 w-full rounded-lg overflow-hidden border border-slate-300 bg-slate-100 group">
+                  <img src={verificationPhotoUrl} alt="Verification Evidence" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => verificationFileInputRef.current?.click()}
+                      className="bg-white/95 text-slate-900 text-[10px] font-bold px-2 py-1 rounded shadow-sm flex items-center gap-1 cursor-pointer"
+                    >
+                      <RefreshCw className="w-3 h-3 text-blue-600" />
+                      <span>Change Photo</span>
+                    </button>
+                  </div>
+                  <span className="absolute bottom-1 left-1 bg-black/75 text-emerald-300 text-[9px] font-mono px-2 py-0.5 rounded font-bold">
+                    POST-REMEDIATION PROOF • VERIFIED
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5 pt-1">
+                  <div className="relative flex-1">
+                    <Link2 className="w-3 h-3 text-slate-400 absolute left-2 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="url"
+                      placeholder="Or paste post-work photo URL..."
+                      value={manualVerificationUrl}
+                      onChange={(e) => setManualVerificationUrl(e.target.value)}
+                      className="w-full pl-7 pr-2 py-1 bg-white border border-slate-200 rounded text-[11px]"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (manualVerificationUrl.trim()) {
+                        setVerificationPhotoUrl(manualVerificationUrl.trim());
+                        setManualVerificationUrl('');
+                      }
+                    }}
+                    disabled={!manualVerificationUrl.trim()}
+                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-900 disabled:opacity-40 text-white font-bold rounded text-[11px] cursor-pointer"
+                  >
+                    Set
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2">
