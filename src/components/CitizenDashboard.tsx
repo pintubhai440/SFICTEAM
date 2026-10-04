@@ -70,7 +70,7 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
             Nir-ikshan Citizen Portal (ప్రజా జల పర్యవేక్షణ)
           </h2>
           <p className="text-xs sm:text-sm text-sky-200 leading-relaxed font-normal">
-            No login required! Citizens in <strong>Vizianagaram</strong> & <strong>Parvathipuram Manyam</strong> can track water bodies, monitor water quality, and lodge direct complaints with auto-GPS coordinates and photo proofs.
+            No login required! Citizens in <strong>Vizianagaram</strong>, <strong>Parvathipuram Manyam</strong> & <strong>Visakhapatnam</strong> can track water bodies, monitor water quality, and lodge direct complaints with auto-GPS coordinates and photo proofs.
           </p>
         </div>
 

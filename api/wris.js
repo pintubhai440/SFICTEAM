@@ -128,7 +128,7 @@ async function queryWrisEndpoint(endpoint, state, district, agency, startDate, e
   const url = `https://indiawris.gov.in${endpoint}?stateName=${encodedState}&districtName=${encodedDistrict}&agencyName=${encodedAgency}&startdate=${startDate}&enddate=${endDate}&download=false&page=1&size=100`;
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 1500);
+  const timeoutId = setTimeout(() => controller.abort(), 900);
 
   try {
     const response = await fetch(url, {
@@ -304,32 +304,36 @@ export default async function handler(req, res) {
       const allResults = {};
       const keys = ['reservoir', 'rainfall', 'groundwater', 'river_level', 'river_discharge'];
 
-      for (const k of keys) {
-        const c = DATASET_CONFIG[k];
-        let remoteData = null;
-        for (const ag of c.agencies) {
-          remoteData = await queryWrisEndpoint(c.endpoint, stateName, districtName, ag, startDate, endDate);
-          if (remoteData) break;
-        }
+      await Promise.all(
+        keys.map(async (k) => {
+          const c = DATASET_CONFIG[k];
+          let remoteData = null;
+          for (const ag of c.agencies) {
+            remoteData = await queryWrisEndpoint(c.endpoint, stateName, districtName, ag, startDate, endDate);
+            if (remoteData) break;
+          }
 
-        const dataArray = Array.isArray(remoteData)
-          ? remoteData
-          : remoteData?.data && Array.isArray(remoteData.data)
-          ? remoteData.data
-          : generateFallbackData(districtName, k, endDate);
+          const dataArray = Array.isArray(remoteData)
+            ? remoteData
+            : remoteData?.data && Array.isArray(remoteData.data)
+            ? remoteData.data
+            : generateFallbackData(districtName, k, endDate);
 
-        allResults[k] = dataArray;
-      }
+          allResults[k] = dataArray;
+        })
+      );
 
-      return res.status(200).json({
+      const responsePayload = {
         status: 'success',
         district: districtName,
         state: stateName,
         date: endDate,
         datasets: allResults,
-        // Top-level compatibility for existing components
         data: allResults.reservoir,
-      });
+      };
+
+      wrisCache.set(cacheKey, { timestamp: Date.now(), data: responsePayload });
+      return res.status(200).json(responsePayload);
     }
 
     // Single dataset request

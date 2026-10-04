@@ -30,7 +30,7 @@ export const LodgeComplaintModal: React.FC<LodgeComplaintModalProps> = ({
   const [citizenAge, setCitizenAge] = useState<number | ''>('');
   const [citizenGender, setCitizenGender] = useState<'Male' | 'Female' | 'Other'>('Male');
   const [citizenPhone, setCitizenPhone] = useState('');
-  const [district, setDistrict] = useState<'Vizianagaram' | 'Parvathipuram Manyam'>('Vizianagaram');
+  const [district, setDistrict] = useState<'Vizianagaram' | 'Parvathipuram Manyam' | 'Visakhapatnam'>('Vizianagaram');
   const [mandal, setMandal] = useState('Nellimarla');
   const [village, setVillage] = useState('');
   const [locationLandmark, setLocationLandmark] = useState('');
@@ -59,8 +59,8 @@ export const LodgeComplaintModal: React.FC<LodgeComplaintModalProps> = ({
         },
         () => {
           // fallback in district range
-          const baseLat = district === 'Vizianagaram' ? 18.1145 : 18.7845;
-          const baseLng = district === 'Vizianagaram' ? 83.4072 : 83.4982;
+          const baseLat = district === 'Vizianagaram' ? 18.1145 : district === 'Parvathipuram Manyam' ? 18.7845 : 17.7280;
+          const baseLng = district === 'Vizianagaram' ? 83.4072 : district === 'Parvathipuram Manyam' ? 83.4982 : 83.3020;
           setCoordinates({
             lat: Number((baseLat + (Math.random() - 0.5) * 0.05).toFixed(6)),
             lng: Number((baseLng + (Math.random() - 0.5) * 0.05).toFixed(6)),
@@ -113,7 +113,9 @@ export const LodgeComplaintModal: React.FC<LodgeComplaintModalProps> = ({
 
     const assignedOfficerName = district === 'Vizianagaram'
       ? 'Er. N. Subba Rao (Vizianagaram)'
-      : 'Smt. P. Hemalatha (Parvathipuram Manyam)';
+      : district === 'Parvathipuram Manyam'
+      ? 'Smt. P. Hemalatha (Parvathipuram Manyam)'
+      : 'Er. K. Viswanadham (Visakhapatnam)';
 
     const newComplaint: CitizenComplaint = {
       id: ticketId,
@@ -122,7 +124,7 @@ export const LodgeComplaintModal: React.FC<LodgeComplaintModalProps> = ({
       citizenGender,
       citizenPhone: citizenPhone || '+91 98000 00000',
       district,
-      mandal: mandal || (district === 'Vizianagaram' ? 'Vizianagaram Rural' : 'Salur'),
+      mandal: mandal || (district === 'Vizianagaram' ? 'Vizianagaram Rural' : district === 'Parvathipuram Manyam' ? 'Salur' : 'Gopalapatnam'),
       village: village || 'Near Panchayat Nala',
       locationLandmark: locationLandmark || 'Near Village Primary School & Canal Junction',
       coordinates,
@@ -257,6 +259,7 @@ export const LodgeComplaintModal: React.FC<LodgeComplaintModalProps> = ({
                 >
                   <option value="Vizianagaram">Vizianagaram (విజయనగరం)</option>
                   <option value="Parvathipuram Manyam">Parvathipuram Manyam (పార్వతీపురం మన్యం)</option>
+                  <option value="Visakhapatnam">Visakhapatnam (విశాఖపట్నం)</option>
                 </select>
               </div>
 

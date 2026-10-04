@@ -37,6 +37,11 @@ import {
 import { BhuvanWbisDetailModal } from './BhuvanWbisDetailModal';
 import { VizianagaramCadastralMapSvg, VizianagaramMandalData } from './VizianagaramCadastralMapSvg';
 import { VIZIANAGARAM_ALL_MANDAL_WATER_BODIES } from '../data/vizianagaramMandalsWaterData';
+import { ParvathipuramCadastralMapSvg, ParvathipuramMandalData } from './ParvathipuramCadastralMapSvg';
+import { PARVATHIPURAM_ALL_MANDAL_WATER_BODIES } from '../data/parvathipuramMandalsWaterData';
+import { VisakhapatnamCadastralMapSvg, VisakhapatnamMandalData } from './VisakhapatnamCadastralMapSvg';
+import { VISAKHAPATNAM_ALL_MANDAL_WATER_BODIES } from '../data/visakhapatnamMandalsWaterData';
+import { AllDistrictsCombinedCadastralMapSvg } from './AllDistrictsCombinedCadastralMapSvg';
 
 interface InteractiveAndhraMapProps {
   waterBodies: WaterBody[];
@@ -60,7 +65,7 @@ type DatasetTab =
   | 'basin_reservoir' 
   | 'basin_rainfall';
 
-type MapViewFilter = 'all' | 'alerts' | 'active' | 'extinct';
+type MapViewFilter = 'all' | 'extinct' | 'red' | 'green' | 'yellow' | 'blue';
 
 export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
   waterBodies,
@@ -76,7 +81,7 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
     return districtFilter !== 'all' ? districtFilter : 'Vizianagaram';
   });
 
-  // Filter: 'all' | 'alerts' | 'active' | 'extinct'
+  // Filter: 'all' | 'extinct' | 'red' | 'green' | 'yellow' | 'blue'
   const [viewFilter, setViewFilter] = useState<MapViewFilter>('all');
   // Selected India-WRIS 9-Dataset Filter (Directly on Map)
   const [activeDatasetTab, setActiveDatasetTab] = useState<DatasetTab>('all');
@@ -95,19 +100,34 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
   });
   const [hoveredWaterBody, setHoveredWaterBody] = useState<WaterBody | null>(null);
 
-  // Vizianagaram Cadastral Map state & layer controls (100% Water-focused)
+  // Cadastral Map state & layer controls (100% Water-focused)
   const [selectedMandalId, setSelectedMandalId] = useState<string | null>(null);
+  const [selectedPvmMandalId, setSelectedPvmMandalId] = useState<string | null>(null);
+  const [selectedVzgMandalId, setSelectedVzgMandalId] = useState<string | null>(null);
   const [showVzmRivers, setShowVzmRivers] = useState<boolean>(true);
   const [showVzmTanks, setShowVzmTanks] = useState<boolean>(true);
   const [showVzmSensors, setShowVzmSensors] = useState<boolean>(true);
 
-  // Guarantee that all 28 Mandals of Vizianagaram have rich, active water bodies
+  // Guarantee that all 28 Mandals of Vizianagaram, 15 Mandals of Parvathipuram & 11 Mandals of Visakhapatnam have rich, active water bodies
   const allAvailableWaterBodies = React.useMemo(() => {
     const existingIds = new Set(waterBodies.map(w => w.id));
     const merged = [...waterBodies];
     Object.values(VIZIANAGARAM_ALL_MANDAL_WATER_BODIES).forEach(mandalWb => {
       if (!existingIds.has(mandalWb.id)) {
         merged.push(mandalWb);
+        existingIds.add(mandalWb.id);
+      }
+    });
+    Object.values(PARVATHIPURAM_ALL_MANDAL_WATER_BODIES).forEach(mandalWb => {
+      if (!existingIds.has(mandalWb.id)) {
+        merged.push(mandalWb);
+        existingIds.add(mandalWb.id);
+      }
+    });
+    Object.values(VISAKHAPATNAM_ALL_MANDAL_WATER_BODIES).forEach(mandalWb => {
+      if (!existingIds.has(mandalWb.id)) {
+        merged.push(mandalWb);
+        existingIds.add(mandalWb.id);
       }
     });
     return merged;
@@ -118,6 +138,38 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
     // 1. Direct mandal id lookup (100% reliable)
     const directWb = VIZIANAGARAM_ALL_MANDAL_WATER_BODIES[mandal.id];
     // 2. Search in allAvailableWaterBodies as fallback
+    const targetWb = directWb || allAvailableWaterBodies.find(wb => 
+      wb.mandal && (
+        wb.mandal.toLowerCase().includes(mandal.name.toLowerCase()) || 
+        mandal.name.toLowerCase().includes(wb.mandal.toLowerCase()) ||
+        wb.village?.toLowerCase().includes(mandal.name.toLowerCase())
+      )
+    );
+    if (targetWb) {
+      setActiveWaterBody(targetWb);
+      if (onSelectWaterBody) onSelectWaterBody(targetWb);
+    }
+  };
+
+  const handleSelectParvathipuramMandal = (mandal: ParvathipuramMandalData) => {
+    setSelectedPvmMandalId(mandal.id);
+    const directWb = PARVATHIPURAM_ALL_MANDAL_WATER_BODIES[mandal.id];
+    const targetWb = directWb || allAvailableWaterBodies.find(wb => 
+      wb.mandal && (
+        wb.mandal.toLowerCase().includes(mandal.name.toLowerCase()) || 
+        mandal.name.toLowerCase().includes(wb.mandal.toLowerCase()) ||
+        wb.village?.toLowerCase().includes(mandal.name.toLowerCase())
+      )
+    );
+    if (targetWb) {
+      setActiveWaterBody(targetWb);
+      if (onSelectWaterBody) onSelectWaterBody(targetWb);
+    }
+  };
+
+  const handleSelectVisakhapatnamMandal = (mandal: VisakhapatnamMandalData) => {
+    setSelectedVzgMandalId(mandal.id);
+    const directWb = VISAKHAPATNAM_ALL_MANDAL_WATER_BODIES[mandal.id];
     const targetWb = directWb || allAvailableWaterBodies.find(wb => 
       wb.mandal && (
         wb.mandal.toLowerCase().includes(mandal.name.toLowerCase()) || 
@@ -177,6 +229,26 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
       ? 'Parvathipuram Manyam'
       : selectedDistrict;
 
+  // Synchronize active water body on district change
+  useEffect(() => {
+    if (effectiveDistrict === 'Visakhapatnam') {
+      if (!activeWaterBody || activeWaterBody.district !== 'Visakhapatnam') {
+        const vzgWb = VISAKHAPATNAM_ALL_MANDAL_WATER_BODIES['gopalapatnam'] || allAvailableWaterBodies.find(w => w.district === 'Visakhapatnam');
+        if (vzgWb) setActiveWaterBody(vzgWb);
+      }
+    } else if (effectiveDistrict === 'Parvathipuram Manyam') {
+      if (!activeWaterBody || activeWaterBody.district !== 'Parvathipuram Manyam') {
+        const pvmWb = PARVATHIPURAM_ALL_MANDAL_WATER_BODIES['garugubilli'] || allAvailableWaterBodies.find(w => w.district === 'Parvathipuram Manyam');
+        if (pvmWb) setActiveWaterBody(pvmWb);
+      }
+    } else if (effectiveDistrict === 'Vizianagaram') {
+      if (!activeWaterBody || activeWaterBody.district !== 'Vizianagaram') {
+        const vzmWb = VIZIANAGARAM_ALL_MANDAL_WATER_BODIES['nellimarla'] || allAvailableWaterBodies.find(w => w.district === 'Vizianagaram');
+        if (vzmWb) setActiveWaterBody(vzmWb);
+      }
+    }
+  }, [effectiveDistrict]);
+
   // Live India WRIS Telemetry Fetch
   const fetchWrisData = async (dist: string, tab: DatasetTab) => {
     setIsLoadingLive(true);
@@ -205,9 +277,16 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
   const handleSelectWaterBody = (wb: WaterBody) => {
     setActiveWaterBody(wb);
     if (onSelectWaterBody) onSelectWaterBody(wb);
+    // Smooth scroll down to the dossier details below without any popup card blocking the view
+    setTimeout(() => {
+      const el = document.getElementById('apwrims-dossier');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 80);
   };
 
-  // Filter based on district, video filter (all/alerts/active/extinct), and dataset tab (all/9 endpoints)
+  // Filter based on district, 5-color status, and dataset tab (all/9 endpoints)
   const filteredWaterBodies = allAvailableWaterBodies.filter((wb) => {
     if (wb.state && wb.state !== 'Andhra Pradesh') return false;
     const matchesDistrict = effectiveDistrict === 'all' || wb.district === effectiveDistrict;
@@ -220,24 +299,37 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
       if (!isMatch) return false;
     }
 
-    // Video Filter: all / alerts / active / extinct
-    if (viewFilter === 'alerts') {
-      return wb.statusColor === 'red' || wb.statusColor === 'yellow';
-    }
-    if (viewFilter === 'active') {
-      return wb.statusColor === 'blue' || wb.statusColor === 'green';
-    }
+    // 5-Color Condition Filter
+    // 1. Extinct (Grey)
     if (viewFilter === 'extinct') {
       return wb.statusColor === 'grey' || wb.bhuvanWbis?.isExtinct;
+    }
+    // 2. Danger Zone (Red)
+    if (viewFilter === 'red') {
+      return wb.statusColor === 'red';
+    }
+    // 3. Good Condition (Green)
+    if (viewFilter === 'green') {
+      return wb.statusColor === 'green';
+    }
+    // 4. Medium (Yellow)
+    if (viewFilter === 'yellow') {
+      return wb.statusColor === 'yellow';
+    }
+    // 5. Normal (Blue)
+    if (viewFilter === 'blue') {
+      return wb.statusColor === 'blue';
     }
 
     return true;
   });
 
   const districtWaterBodies = allAvailableWaterBodies.filter(w => effectiveDistrict === 'all' || w.district === effectiveDistrict);
-  const alertCount = districtWaterBodies.filter(wb => wb.statusColor === 'red' || wb.statusColor === 'yellow').length;
-  const activeCount = districtWaterBodies.filter(wb => wb.statusColor === 'blue' || wb.statusColor === 'green').length;
   const extinctCount = districtWaterBodies.filter(wb => wb.statusColor === 'grey' || wb.bhuvanWbis?.isExtinct).length;
+  const dangerCount = districtWaterBodies.filter(wb => wb.statusColor === 'red').length;
+  const goodCount = districtWaterBodies.filter(wb => wb.statusColor === 'green').length;
+  const mediumCount = districtWaterBodies.filter(wb => wb.statusColor === 'yellow').length;
+  const normalCount = districtWaterBodies.filter(wb => wb.statusColor === 'blue').length;
 
   // Coordinate Projections based on selected district
   const projectCoords = (lat: number, lng: number) => {
@@ -278,65 +370,71 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
 
   const getColorClasses = (color: WaterBodyStatusColor) => {
     switch (color) {
-      case 'green':
+      case 'grey':
         return {
-          fill: '#10b981',
-          stroke: '#047857',
-          pulse: 'rgba(16, 185, 129, 0.45)',
-          badge: 'bg-emerald-50 text-emerald-700 border-emerald-300',
-          flagText: 'PRISTINE CATCHMENT (BAHUT ACHHA)',
-          flagBadge: 'bg-emerald-600 text-white',
-          label: 'Bahut Achha (Pristine Quality)',
-        };
-      case 'blue':
-        return {
-          fill: '#0284c7',
-          stroke: '#0369a1',
-          pulse: 'rgba(2, 132, 199, 0.45)',
-          badge: 'bg-sky-50 text-sky-700 border-sky-300',
-          flagText: 'ACTIVE GOVT TELEMETRY',
-          flagBadge: 'bg-[#0047ab] text-white',
-          label: 'Normal Quality (Active Inflow)',
-        };
-      case 'yellow':
-        return {
-          fill: '#f59e0b',
-          stroke: '#b45309',
-          pulse: 'rgba(245, 158, 11, 0.45)',
-          badge: 'bg-amber-50 text-amber-800 border-amber-300',
-          flagText: 'MODERATE SILT / OVERFLOW ALERT',
-          flagBadge: 'bg-amber-500 text-white',
-          label: 'Middle Problem (Moderate Stress)',
+          fill: '#64748b',
+          stroke: '#334155',
+          pulse: 'rgba(100, 116, 139, 0.55)',
+          badge: 'bg-slate-200 text-slate-800 border-slate-400 font-bold',
+          flagText: '1. EXTINCT (SOOKH KAR MIT GAYA - GREY)',
+          flagBadge: 'bg-slate-700 text-white font-extrabold',
+          label: '1. Extinct (Sookh Kar Mit Gaya - Grey)',
+          tag: '1. Extinct (Grey)',
         };
       case 'red':
         return {
           fill: '#ef4444',
           stroke: '#b91c1c',
           pulse: 'rgba(239, 68, 68, 0.65)',
-          badge: 'bg-rose-50 text-rose-700 border-rose-300',
-          flagText: 'CRITICAL EFFLUENT / HAZARD FLAG',
-          flagBadge: 'bg-rose-600 text-white animate-pulse',
-          label: 'Danger Zone (Critical Hazard)',
+          badge: 'bg-rose-50 text-rose-700 border-rose-300 font-bold',
+          flagText: '2. DANGER ZONE (CRITICAL HAZARD - RED)',
+          flagBadge: 'bg-rose-600 text-white font-extrabold animate-pulse',
+          label: '2. Danger Zone (Critical Hazard - Red)',
+          tag: '2. Danger Zone (Red)',
         };
-      case 'grey':
+      case 'green':
         return {
-          fill: '#64748b',
-          stroke: '#334155',
-          pulse: 'rgba(100, 116, 139, 0.45)',
-          badge: 'bg-slate-200 text-slate-800 border-slate-400 font-bold',
-          flagText: 'SOOKH KAR MIT GAYA (EXTINCT)',
-          flagBadge: 'bg-slate-700 text-white font-extrabold',
-          label: 'Existence Se Mit Gaya (Extinct - NDWI < 0)',
+          fill: '#10b981',
+          stroke: '#047857',
+          pulse: 'rgba(16, 185, 129, 0.55)',
+          badge: 'bg-emerald-50 text-emerald-700 border-emerald-300 font-bold',
+          flagText: '3. GOOD CONDITION (PRISTINE / BAHUT ACHHA - GREEN)',
+          flagBadge: 'bg-emerald-600 text-white font-extrabold',
+          label: '3. Good Condition (Bahut Achha - Green)',
+          tag: '3. Good Condition (Green)',
+        };
+      case 'yellow':
+        return {
+          fill: '#f59e0b',
+          stroke: '#b45309',
+          pulse: 'rgba(245, 158, 11, 0.55)',
+          badge: 'bg-amber-50 text-amber-800 border-amber-300 font-bold',
+          flagText: '4. MEDIUM (MODERATE STRESS / SILT - YELLOW)',
+          flagBadge: 'bg-amber-500 text-white font-extrabold',
+          label: '4. Medium (Moderate Stress - Yellow)',
+          tag: '4. Medium (Yellow)',
+        };
+      case 'blue':
+        return {
+          fill: '#0284c7',
+          stroke: '#0369a1',
+          pulse: 'rgba(2, 132, 199, 0.55)',
+          badge: 'bg-sky-50 text-sky-700 border-sky-300 font-bold',
+          flagText: '5. NORMAL (ACTIVE GOVT TELEMETRY - BLUE)',
+          flagBadge: 'bg-[#0047ab] text-white font-extrabold',
+          label: '5. Normal (Active Baseline - Blue)',
+          tag: '5. Normal (Blue)',
         };
       default:
         return {
           fill: '#0284c7',
           stroke: '#0369a1',
-          pulse: 'rgba(2, 132, 199, 0.45)',
-          badge: 'bg-sky-50 text-sky-700 border-sky-300',
-          flagText: 'ACTIVE GOVT TELEMETRY',
-          flagBadge: 'bg-[#0047ab] text-white',
-          label: 'Normal',
+          pulse: 'rgba(2, 132, 199, 0.55)',
+          badge: 'bg-sky-50 text-sky-700 border-sky-300 font-bold',
+          flagText: '5. NORMAL (ACTIVE GOVT TELEMETRY - BLUE)',
+          flagBadge: 'bg-[#0047ab] text-white font-extrabold',
+          label: '5. Normal (Blue)',
+          tag: '5. Normal (Blue)',
         };
     }
   };
@@ -378,7 +476,15 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 flex-wrap">
-              <span>{effectiveDistrict === 'Vizianagaram' ? 'Vizianagaram District Water Surveillance Map (విజయనగరం జల పర్యవేక్షణ)' : 'National Water Informatics Centre Surveillance Grid'}</span>
+              <span>
+                {effectiveDistrict === 'Vizianagaram' 
+                  ? 'Vizianagaram District Water Surveillance Map (విజయనగరం జల పర్యవేక్షణ)' 
+                  : effectiveDistrict === 'Parvathipuram Manyam' 
+                  ? 'Parvathipuram Manyam District Water Surveillance Map (పార్వతీపురం మన్యం జల పర్యవేక్షణ)' 
+                  : effectiveDistrict === 'Visakhapatnam'
+                  ? 'Visakhapatnam District Water Surveillance Map (విశాఖపట్నం జల పర్యవేక్షణ)'
+                  : 'National Water Informatics Centre Surveillance Grid'}
+              </span>
               <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-blue-50 text-[#0047ab] border border-blue-200">
                 {effectiveDistrict === 'all' ? 'ALL 3 DISTRICTS' : effectiveDistrict.toUpperCase()}
               </span>
@@ -387,12 +493,32 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
           <p className="text-[11px] text-slate-500 font-medium">
             {effectiveDistrict === 'Vizianagaram' 
               ? '28 Mandals Hydrological & Satellite Surveillance • Click any Mandal, Water Body or River for live data' 
+              : effectiveDistrict === 'Parvathipuram Manyam'
+              ? '15 Mandals Hydrological & Satellite Surveillance • Thotapalli Barrage, Janjavathi Rubber Dam & Vengalaraya Sagaram'
+              : effectiveDistrict === 'Visakhapatnam'
+              ? '11 Mandals Hydrological & Satellite Surveillance • Meghadrigedda (34.2 MCM), Mudasarlova (18.5 MCM), Gambheeram & Gosthani Estuary'
               : 'Direct telemetry from India-WRIS OpenAPI 3.0 across Vizianagaram, Parvathipuram & Visakhapatnam'}
           </p>
         </div>
 
         {/* Video Filter Control: [ All ] [ Alerts ] [ Active ] [ Sookh Kar Mit Gaya ] & Controls */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Live Sync India-WRIS & ISRO Bhuvan button */}
+          <button
+            onClick={() => fetchWrisData(effectiveDistrict, activeDatasetTab)}
+            disabled={isLoadingLive}
+            className={`px-2.5 py-1.5 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              isLoadingLive
+                ? 'bg-blue-100 text-blue-800 border-blue-300'
+                : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+            }`}
+            title="Fetch real-time live telemetry from India-WRIS OpenAPI 3.0 & ISRO Bhuvan"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingLive ? 'animate-spin text-blue-600' : 'text-emerald-600'}`} />
+            <span className="hidden sm:inline">Live WRIS/Bhuvan</span>
+            {lastRefreshedAt && <span className="text-[10px] text-emerald-700 hidden md:inline">({lastRefreshedAt})</span>}
+          </button>
+
           {/* 15-Day NDWI Satellite Mode toggle */}
           <button
             onClick={() => setIsNdwiSatelliteOverlayActive(!isNdwiSatelliteOverlayActive)}
@@ -466,59 +592,124 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
             </button>
           </div>
 
-          {/* All | Alerts | Active | Extinct Tabs */}
-          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs font-bold">
+          {/* 5-Color Filter Tabs: All, Extinct (Grey), Danger Zone (Red), Good Condition (Green), Medium (Yellow), Normal (Blue) */}
+          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs font-bold overflow-x-auto max-w-full">
             <button
               onClick={() => setViewFilter('all')}
-              className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+              className={`px-2.5 py-1 rounded-md transition-all cursor-pointer whitespace-nowrap ${
                 viewFilter === 'all' 
                   ? 'bg-[#0047ab] text-white shadow-xs' 
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              All ({districtWaterBodies.length})
-            </button>
-            <button
-              onClick={() => setViewFilter('alerts')}
-              className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer ${
-                viewFilter === 'alerts' 
-                  ? 'bg-rose-600 text-white shadow-xs' 
-                  : 'text-slate-600 hover:text-rose-600'
-              }`}
-            >
-              <span>Alerts</span>
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${viewFilter === 'alerts' ? 'bg-white text-rose-600' : 'bg-rose-100 text-rose-700'}`}>
-                {alertCount}
-              </span>
-            </button>
-            <button
-              onClick={() => setViewFilter('active')}
-              className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer ${
-                viewFilter === 'active' 
-                  ? 'bg-emerald-600 text-white shadow-xs' 
-                  : 'text-slate-600 hover:text-emerald-600'
-              }`}
-            >
-              <span>Active</span>
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${viewFilter === 'active' ? 'bg-white text-emerald-600' : 'bg-emerald-100 text-emerald-700'}`}>
-                {activeCount}
-              </span>
+              All Grid ({districtWaterBodies.length})
             </button>
             <button
               onClick={() => setViewFilter('extinct')}
-              className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer ${
+              className={`px-2 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap ${
                 viewFilter === 'extinct' 
                   ? 'bg-slate-700 text-white shadow-xs' 
                   : 'text-slate-600 hover:text-slate-900'
               }`}
-              title="Talab sookh kar mit gaya hai (Grey color status)"
+              title="1. Extinct / Sookh Kar Mit Gaya (Grey Colour)"
             >
-              <span>⚪ Sookh Kar Mit Gaya</span>
+              <span className="w-2 h-2 rounded-full bg-slate-400"></span>
+              <span>1. Extinct</span>
               <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${viewFilter === 'extinct' ? 'bg-white text-slate-800 font-bold' : 'bg-slate-200 text-slate-700'}`}>
                 {extinctCount}
               </span>
             </button>
+            <button
+              onClick={() => setViewFilter('red')}
+              className={`px-2 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap ${
+                viewFilter === 'red' 
+                  ? 'bg-rose-600 text-white shadow-xs' 
+                  : 'text-slate-600 hover:text-rose-600'
+              }`}
+              title="2. Danger Zone (Red Colour)"
+            >
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+              <span>2. Danger Zone</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${viewFilter === 'red' ? 'bg-white text-rose-600' : 'bg-rose-100 text-rose-700'}`}>
+                {dangerCount}
+              </span>
+            </button>
+            <button
+              onClick={() => setViewFilter('green')}
+              className={`px-2 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap ${
+                viewFilter === 'green' 
+                  ? 'bg-emerald-600 text-white shadow-xs' 
+                  : 'text-slate-600 hover:text-emerald-600'
+              }`}
+              title="3. Good Condition / Bahut Achha (Green Colour)"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span>3. Good Condition</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${viewFilter === 'green' ? 'bg-white text-emerald-600' : 'bg-emerald-100 text-emerald-700'}`}>
+                {goodCount}
+              </span>
+            </button>
+            <button
+              onClick={() => setViewFilter('yellow')}
+              className={`px-2 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap ${
+                viewFilter === 'yellow' 
+                  ? 'bg-amber-500 text-white shadow-xs' 
+                  : 'text-slate-600 hover:text-amber-600'
+              }`}
+              title="4. Medium / Moderate Stress (Yellow Colour)"
+            >
+              <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+              <span>4. Medium</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${viewFilter === 'yellow' ? 'bg-white text-amber-800 font-bold' : 'bg-amber-100 text-amber-800'}`}>
+                {mediumCount}
+              </span>
+            </button>
+            <button
+              onClick={() => setViewFilter('blue')}
+              className={`px-2 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap ${
+                viewFilter === 'blue' 
+                  ? 'bg-sky-600 text-white shadow-xs' 
+                  : 'text-slate-600 hover:text-sky-600'
+              }`}
+              title="5. Normal / Active Baseline (Blue Colour)"
+            >
+              <span className="w-2 h-2 rounded-full bg-sky-400"></span>
+              <span>5. Normal</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${viewFilter === 'blue' ? 'bg-white text-sky-800 font-bold' : 'bg-sky-100 text-sky-800'}`}>
+                {normalCount}
+              </span>
+            </button>
           </div>
+        </div>
+      </div>
+
+      {/* 5-Color Status Legend Bar with Clear Badges */}
+      <div className="bg-slate-50 border-b border-slate-200 px-3 sm:px-4 py-2 flex items-center justify-between gap-3 overflow-x-auto text-[11px] select-none">
+        <div className="flex items-center gap-1.5 text-slate-700 font-bold shrink-0">
+          <span className="w-2 h-2 rounded-full bg-sky-500 animate-ping"></span>
+          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500">5 Status Classification:</span>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 flex-wrap">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-slate-200 text-slate-800 font-bold border border-slate-300">
+            <span className="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+            <span>1. Extinct (Grey) – Sookh Kar Mit Gaya</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-rose-100 text-rose-800 font-bold border border-rose-300">
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-pulse"></span>
+            <span>2. Danger Zone (Red) – Critical Hazard / Silt</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 font-bold border border-emerald-300">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+            <span>3. Good Condition (Green) – Bahut Achha</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-amber-100 text-amber-900 font-bold border border-amber-300">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+            <span>4. Medium (Yellow) – Moderate Stress</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-sky-100 text-sky-800 font-bold border border-sky-300">
+            <span className="w-2.5 h-2.5 rounded-full bg-sky-600"></span>
+            <span>5. Normal (Blue) – Baseline Inflow</span>
+          </span>
         </div>
       </div>
 
@@ -670,10 +861,39 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
             onSelectWaterBody={handleSelectWaterBody}
             onSelectMandal={handleSelectMandal}
             selectedMandalId={selectedMandalId}
+            viewFilter={viewFilter}
             theme={theme}
             showRivers={showVzmRivers}
             showTanks={showVzmTanks}
             showSensors={showVzmSensors}
+            onSwitchDistrict={(dist) => setSelectedDistrict(dist)}
+            onLodgeComplaint={onLodgeComplaint}
+          />
+        ) : effectiveDistrict === 'Parvathipuram Manyam' ? (
+          <ParvathipuramCadastralMapSvg
+            waterBodies={waterBodies}
+            activeWaterBody={activeWaterBody}
+            hoveredWaterBody={hoveredWaterBody}
+            onSelectWaterBody={handleSelectWaterBody}
+            onSelectMandal={handleSelectParvathipuramMandal}
+            selectedMandalId={selectedPvmMandalId}
+            viewFilter={viewFilter}
+            theme={theme}
+            showRivers={showVzmRivers}
+            onSwitchDistrict={(dist) => setSelectedDistrict(dist)}
+            onLodgeComplaint={onLodgeComplaint}
+          />
+        ) : effectiveDistrict === 'Visakhapatnam' ? (
+          <VisakhapatnamCadastralMapSvg
+            waterBodies={waterBodies}
+            activeWaterBody={activeWaterBody}
+            hoveredWaterBody={hoveredWaterBody}
+            onSelectWaterBody={handleSelectWaterBody}
+            onSelectMandal={handleSelectVisakhapatnamMandal}
+            selectedMandalId={selectedVzgMandalId}
+            viewFilter={viewFilter}
+            theme={theme}
+            showRivers={showVzmRivers}
             onSwitchDistrict={(dist) => setSelectedDistrict(dist)}
             onLodgeComplaint={onLodgeComplaint}
           />
@@ -740,22 +960,39 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
               <stop offset="100%" stopColor="#0369a1" stopOpacity={theme === 'light' ? '0.35' : '0.6'} />
             </linearGradient>
 
+            {/* 1. Red Danger Zone Aura */}
             <radialGradient id="redHazardGlow" cx="50%" cy="50%" r="50%">
               <stop offset="0%" stopColor="#ef4444" stopOpacity="0.55" />
               <stop offset="60%" stopColor="#dc2626" stopOpacity="0.25" />
               <stop offset="100%" stopColor="#991b1b" stopOpacity="0" />
             </radialGradient>
 
+            {/* 2. Blue Normal Active Aura */}
             <radialGradient id="blueActiveGlow" cx="50%" cy="50%" r="50%">
               <stop offset="0%" stopColor="#0284c7" stopOpacity="0.5" />
               <stop offset="60%" stopColor="#38bdf8" stopOpacity="0.2" />
               <stop offset="100%" stopColor="#0369a1" stopOpacity="0" />
             </radialGradient>
 
+            {/* 3. Green Pristine Good Condition Aura */}
             <radialGradient id="greenPristineGlow" cx="50%" cy="50%" r="50%">
               <stop offset="0%" stopColor="#10b981" stopOpacity="0.55" />
               <stop offset="60%" stopColor="#34d399" stopOpacity="0.25" />
               <stop offset="100%" stopColor="#047857" stopOpacity="0" />
+            </radialGradient>
+
+            {/* 4. Yellow Medium Moderate Stress Aura */}
+            <radialGradient id="yellowMediumGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.55" />
+              <stop offset="60%" stopColor="#d97706" stopOpacity="0.25" />
+              <stop offset="100%" stopColor="#92400e" stopOpacity="0" />
+            </radialGradient>
+
+            {/* 5. Grey Extinct Sookh Kar Mit Gaya Aura */}
+            <radialGradient id="greyExtinctGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#64748b" stopOpacity="0.55" />
+              <stop offset="60%" stopColor="#475569" stopOpacity="0.25" />
+              <stop offset="100%" stopColor="#1e293b" stopOpacity="0" />
             </radialGradient>
           </defs>
 
@@ -817,15 +1054,40 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
                 </text>
               </g>
 
-              {/* Real Rivers with Animated Flow */}
-              <path d="M 310,138 L 482,197 L 620,160 T 710,140" fill="none" stroke={theme === 'light' ? '#0284c7' : '#38bdf8'} strokeWidth="2.5" className="river-flow-line" />
-              <path d="M 297,229 Q 370,300 445,386 L 544,496" fill="none" stroke={theme === 'light' ? '#0284c7' : '#38bdf8'} strokeWidth="2.8" className="river-flow-line" />
-              <path d="M 445,386 L 618,457 L 618,529 L 729,561" fill="none" stroke={theme === 'light' ? '#0284c7' : '#38bdf8'} strokeWidth="3.2" className="river-flow-line" />
-              <path d="M 211,496 L 272,457 Q 340,510 400,560" fill="none" stroke={theme === 'light' ? '#0284c7' : '#38bdf8'} strokeWidth="2.8" className="river-flow-line" />
+              {/* Real Rivers with Animated Flow (Clickable to inspect river stations) */}
+              <g 
+                className="cursor-pointer group"
+                onClick={() => {
+                  const target = allAvailableWaterBodies.find(wb => wb.id === 'wb-vzm-05' || wb.name.includes('Vegavati'));
+                  if (target) handleSelectWaterBody(target);
+                }}
+              >
+                <path d="M 310,138 L 482,197 L 620,160 T 710,140" fill="none" stroke={theme === 'light' ? '#0284c7' : '#38bdf8'} strokeWidth="2.5" className="river-flow-line" />
+                <circle r="4" fill="#38bdf8"><animateMotion path="M 310,138 L 482,197 L 620,160 T 710,140" dur="4s" repeatCount="indefinite" /></circle>
+              </g>
 
-              <circle r="4" fill="#38bdf8"><animateMotion path="M 310,138 L 482,197 L 620,160 T 710,140" dur="4s" repeatCount="indefinite" /></circle>
-              <circle r="4" fill="#38bdf8"><animateMotion path="M 297,229 Q 370,300 445,386 L 544,496" dur="5s" repeatCount="indefinite" /></circle>
-              <circle r="4.5" fill="#0284c7"><animateMotion path="M 445,386 L 618,457 L 618,529 L 729,561" dur="4.5s" repeatCount="indefinite" /></circle>
+              <g 
+                className="cursor-pointer group"
+                onClick={() => {
+                  const target = allAvailableWaterBodies.find(wb => wb.id === 'wb-vzm-04' || wb.name.includes('Champavathi'));
+                  if (target) handleSelectWaterBody(target);
+                }}
+              >
+                <path d="M 297,229 Q 370,300 445,386 L 544,496" fill="none" stroke={theme === 'light' ? '#0284c7' : '#38bdf8'} strokeWidth="2.8" className="river-flow-line" />
+                <path d="M 445,386 L 618,457 L 618,529 L 729,561" fill="none" stroke={theme === 'light' ? '#0284c7' : '#38bdf8'} strokeWidth="3.2" className="river-flow-line" />
+                <circle r="4" fill="#38bdf8"><animateMotion path="M 297,229 Q 370,300 445,386 L 544,496" dur="5s" repeatCount="indefinite" /></circle>
+                <circle r="4.5" fill="#0284c7"><animateMotion path="M 445,386 L 618,457 L 618,529 L 729,561" dur="4.5s" repeatCount="indefinite" /></circle>
+              </g>
+
+              <g 
+                className="cursor-pointer group"
+                onClick={() => {
+                  const target = allAvailableWaterBodies.find(wb => wb.id === 'wb-vzm-02' || wb.name.includes('Tatipudi') || wb.name.includes('Gosthani'));
+                  if (target) handleSelectWaterBody(target);
+                }}
+              >
+                <path d="M 211,496 L 272,457 Q 340,510 400,560" fill="none" stroke={theme === 'light' ? '#0284c7' : '#38bdf8'} strokeWidth="2.8" className="river-flow-line" />
+              </g>
             </g>
           ) : effectiveDistrict === 'Parvathipuram Manyam' ? (
             /* Parvathipuram Manyam District Contour */
@@ -875,10 +1137,21 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
           {/* ============================================================== */}
           {activeWaterBody && (() => {
             const { x, y } = projectCoords(activeWaterBody.coordinates.lat, activeWaterBody.coordinates.lng);
-            const isRed = activeWaterBody.statusColor === 'red';
-            const isGreen = activeWaterBody.statusColor === 'green';
-            const glowId = isRed ? 'url(#redHazardGlow)' : isGreen ? 'url(#greenPristineGlow)' : 'url(#blueActiveGlow)';
-            const ringColor = isRed ? '#ef4444' : isGreen ? '#10b981' : '#0284c7';
+            const color = activeWaterBody.statusColor;
+            const isRed = color === 'red';
+            const isGreen = color === 'green';
+            const isYellow = color === 'yellow';
+            const isGrey = color === 'grey';
+            const glowId = isRed 
+              ? 'url(#redHazardGlow)' 
+              : isGreen 
+              ? 'url(#greenPristineGlow)' 
+              : isYellow
+              ? 'url(#yellowMediumGlow)'
+              : isGrey
+              ? 'url(#greyExtinctGlow)'
+              : 'url(#blueActiveGlow)';
+            const ringColor = isRed ? '#ef4444' : isGreen ? '#10b981' : isYellow ? '#f59e0b' : isGrey ? '#64748b' : '#0284c7';
 
             return (
               <g className="pointer-events-none">
@@ -912,14 +1185,14 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
                 {wb.statusColor === 'red' ? (
                   <circle cx={x} cy={y} className="danger-ring" stroke="#ef4444" fill="none" />
                 ) : isExtinct ? (
-                  <circle cx={x} cy={y} r="20" fill="none" stroke="#64748b" strokeWidth="1.5" strokeDasharray="3 3" opacity="0.6" />
+                  <circle cx={x} cy={y} r="20" fill="none" stroke="#64748b" strokeWidth="1.5" strokeDasharray="3 3" opacity="0.7" />
                 ) : (
                   <circle cx={x} cy={y} className="beacon-ring" stroke={style.fill} fill="none" />
                 )}
 
                 {/* Outer Selection Highlight Ring */}
                 {isSelected && (
-                  <circle cx={x} cy={y} r="22" fill="none" stroke={style.fill} strokeWidth="2.5" strokeDasharray="4 3" className="animate-spin-slow" />
+                  <circle cx={x} cy={y} r={22} fill="none" stroke={style.fill} strokeWidth="2.5" strokeDasharray="4 3" className="animate-spin-slow" />
                 )}
 
                 {/* Main Pin Circle Beacon */}
@@ -948,7 +1221,7 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
                       width="36"
                       height="11"
                       rx="5.5"
-                      fill={isExtinct ? '#334155' : wb.statusColor === 'green' ? '#047857' : wb.statusColor === 'blue' ? '#0369a1' : '#b45309'}
+                      fill={isExtinct ? '#334155' : wb.statusColor === 'green' ? '#047857' : wb.statusColor === 'red' ? '#991b1b' : wb.statusColor === 'yellow' ? '#92400e' : '#0369a1'}
                       opacity="0.95"
                       stroke="#ffffff"
                       strokeWidth="0.8"
@@ -965,10 +1238,10 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
                 {(isSelected || isHovered) && (
                   <g transform={`translate(${x}, ${y - 24})`} className="pointer-events-none animate-in fade-in zoom-in-95 duration-150">
                     <rect
-                      x={-(Math.max(wb.name.length, 24) * 3.6 + 26)}
-                      y="-28"
-                      width={Math.max(wb.name.length, 24) * 7.2 + 52}
-                      height="34"
+                      x={-(Math.max(wb.name.length, 32) * 3.6 + 26)}
+                      y="-30"
+                      width={Math.max(wb.name.length, 32) * 7.2 + 52}
+                      height="36"
                       rx="14"
                       fill={isSelected ? '#0f172a' : theme === 'light' ? 'rgba(255, 255, 255, 0.98)' : 'rgba(15, 23, 42, 0.96)'}
                       stroke={isSelected ? style.fill : theme === 'light' ? '#0284c7' : '#38bdf8'}
@@ -977,26 +1250,32 @@ export const InteractiveAndhraMap: React.FC<InteractiveAndhraMapProps> = ({
                     />
                     <text
                       x="0"
-                      y="-14"
+                      y="-15"
                       fill={isSelected ? '#ffffff' : theme === 'light' ? '#0f172a' : '#ffffff'}
                       fontSize="10.5"
                       fontWeight="800"
                       textAnchor="middle"
                     >
-                      {wb.name.length > 38 ? wb.name.substring(0, 36) + '...' : wb.name}
+                      {wb.name.length > 42 ? wb.name.substring(0, 40) + '...' : wb.name}
                     </text>
                     <text
                       x="0"
                       y="-2"
-                      fill={isExtinct ? '#f87171' : theme === 'light' ? '#0369a1' : '#38bdf8'}
+                      fill={isExtinct ? '#f87171' : wb.statusColor === 'red' ? '#f87171' : wb.statusColor === 'green' ? '#34d399' : wb.statusColor === 'yellow' ? '#fbbf24' : '#38bdf8'}
                       fontSize="8.5"
                       fontFamily="monospace"
                       fontWeight="700"
                       textAnchor="middle"
                     >
-                      {isExtinct 
-                        ? '⚪ SOOKH KAR MIT GAYA (EXTINCT - NDWI: ' + (wb.bhuvanWbis?.ndwiScore ?? -0.28) + ') • Click for Dossier'
-                        : `🛰️ NDWI: ${wb.bhuvanWbis?.ndwiScore ?? '+0.38'} • Storage: ${wb.waterLevelPercent}% • Click for WBIS Details`}
+                      {wb.statusColor === 'grey' || isExtinct
+                        ? `⚪ 1. EXTINCT (Sookh Kar Mit Gaya) • NDWI: ${wb.bhuvanWbis?.ndwiScore ?? -0.28} • Details Niche Dekhein`
+                        : wb.statusColor === 'red'
+                        ? `🔴 2. DANGER ZONE (Critical Hazard) • TDS: ${wb.tdsPpm || 1240} ppm • Details Niche Dekhein`
+                        : wb.statusColor === 'green'
+                        ? `🟢 3. GOOD CONDITION (Bahut Achha) • Storage: ${wb.waterLevelPercent}% • Details Niche Dekhein`
+                        : wb.statusColor === 'yellow'
+                        ? `🟡 4. MEDIUM (Moderate Stress) • TDS: ${wb.tdsPpm || 680} ppm • Details Niche Dekhein`
+                        : `🔵 5. NORMAL (Active Telemetry) • Storage: ${wb.waterLevelPercent}% • Details Niche Dekhein`}
                     </text>
                   </g>
                 )}

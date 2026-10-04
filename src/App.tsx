@@ -34,7 +34,7 @@ export default function App() {
   const [currentRole, setCurrentRole] = useState<UserRoleType>('overview');
 
   // Cache version to automatically purge stale mock data from previous sessions
-  const STORAGE_VERSION = 'v9_punyagiri_dwlr_gwis_satellite_fix';
+  const STORAGE_VERSION = 'v10_vizianagaram_5color_real_telemetry';
 
   // Load persisted state or initial seed data with version check
   const [waterBodies, setWaterBodies] = useState<WaterBody[]>(() => {

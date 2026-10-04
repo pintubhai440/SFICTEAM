@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { WaterBody, WaterBodyStatusColor } from '../types/nirikshan';
 import { VIZIANAGARAM_ALL_MANDAL_WATER_BODIES } from '../data/vizianagaramMandalsWaterData';
 import { 
@@ -14,7 +14,12 @@ import {
   X,
   Compass,
   MapPin,
-  ChevronRight
+  ChevronRight,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  Move
 } from 'lucide-react';
 
 export interface VizianagaramMandalData {
@@ -279,14 +284,14 @@ export const VIZIANAGARAM_MANDALS: VizianagaramMandalData[] = [
     category: 'Urban',
     svgPath: 'M 625,365 L 705,335 L 745,410 L 670,445 L 615,405 Z',
     center: { x: 675, y: 385 },
-    statusColor: 'blue',
-    statusLabel: 'Percolation Tanks Operational',
-    groundwaterDepthMbgl: 7.6,
+    statusColor: 'red',
+    statusLabel: '2. Danger Zone (Critical Groundwater Depletion 14.8 mbgl, Drought Alert)',
+    groundwaterDepthMbgl: 14.8,
     waterBodiesCount: 40,
-    primaryWaterBody: 'Cheepurupalle Town Cheruvu',
+    primaryWaterBody: 'Cheepurupalle Depleted Cheruvu',
     primaryRiver: 'Pedda Gedda Channel',
     riverBasin: 'Pedda Gedda Basin',
-    aquiferStatus: 'Moderate Infiltration',
+    aquiferStatus: 'Over-Exploited Deep Aquifer (Critical)',
     rechargeStructuresCount: 37,
   },
   // 15. Gajapathinagaram
@@ -297,14 +302,14 @@ export const VIZIANAGARAM_MANDALS: VizianagaramMandalData[] = [
     category: 'Rural',
     svgPath: 'M 360,330 L 480,330 L 475,415 L 380,420 L 350,370 Z',
     center: { x: 420, y: 375 },
-    statusColor: 'blue',
-    statusLabel: 'Champavathi River Flood Buffer',
-    groundwaterDepthMbgl: 6.4,
+    statusColor: 'grey',
+    statusLabel: '1. Extinct (Pedda Cheruvu Silted Bed - Sookh Kar Mit Gaya)',
+    groundwaterDepthMbgl: 12.8,
     waterBodiesCount: 37,
-    primaryWaterBody: 'Gajapathinagaram Anicut',
-    primaryRiver: 'Nellimara / Champavathi River',
+    primaryWaterBody: 'Pedda Cheruvu Silted Bed (Extinct)',
+    primaryRiver: 'Nellimara / Champavathi Feeder',
     riverBasin: 'Champavathi River Basin',
-    aquiferStatus: 'River Floodplain Aquifer (Safe)',
+    aquiferStatus: 'Depleted Urban Catchment Bed',
     rechargeStructuresCount: 35,
   },
   // 16. Bondapalle
@@ -315,14 +320,14 @@ export const VIZIANAGARAM_MANDALS: VizianagaramMandalData[] = [
     category: 'Rural',
     svgPath: 'M 275,350 L 360,330 L 380,420 L 305,445 L 265,400 Z',
     center: { x: 325, y: 395 },
-    statusColor: 'blue',
-    statusLabel: 'Normal Soil Moisture',
-    groundwaterDepthMbgl: 6.8,
+    statusColor: 'grey',
+    statusLabel: '1. Extinct (Dry Silted Tank - Sookh Kar Mit Gaya)',
+    groundwaterDepthMbgl: 11.4,
     waterBodiesCount: 29,
-    primaryWaterBody: 'Bondapalle Village Tank',
+    primaryWaterBody: 'Bondapalle Dry Tank (Extinct)',
     primaryRiver: 'Gosthani Upper Feeder',
     riverBasin: 'Gosthani-Champavathi Divide',
-    aquiferStatus: 'Safe Hard-rock Granite',
+    aquiferStatus: 'Depleted Aquifer Bed',
     rechargeStructuresCount: 26,
   },
   // 17. Gurla
@@ -400,19 +405,19 @@ export const VIZIANAGARAM_MANDALS: VizianagaramMandalData[] = [
   // 21. Vizianagaram Urban / Rural
   {
     id: 'vizianagaram_hq',
-    name: 'Vizianagaram',
-    teluguName: 'విజయనగరం',
+    name: 'Vizianagaram Urban',
+    teluguName: 'విజయనగరం అర్బన్',
     category: 'Urban',
     svgPath: 'M 335,490 L 455,465 L 475,540 L 405,560 L 325,530 Z',
     center: { x: 405, y: 515 },
-    statusColor: 'yellow',
-    statusLabel: 'Municipal Urban Pressure • Fort Basin',
-    groundwaterDepthMbgl: 7.9,
+    statusColor: 'red',
+    statusLabel: '2. Danger Zone (Kotha Cheruvu - Severe Effluent Contamination, TDS 1180 ppm)',
+    groundwaterDepthMbgl: 13.5,
     waterBodiesCount: 52,
-    primaryWaterBody: 'Pedda Cheruvu (Fort Urban Basin)',
-    primaryRiver: 'Champavathi Sub-basin',
-    riverBasin: 'Fort Urban Catchment',
-    aquiferStatus: 'Semi-critical Urban Demand',
+    primaryWaterBody: 'Kotha Cheruvu (Critical Contamination & Sewage)',
+    primaryRiver: 'Gosthani Urban Runoff',
+    riverBasin: 'Vizianagaram Urban Catchment',
+    aquiferStatus: 'Over-Exploited / Contaminated Aquifer',
     rechargeStructuresCount: 46,
   },
   // 22. Denkada
@@ -550,6 +555,7 @@ interface VizianagaramCadastralMapSvgProps {
   onSelectWaterBody: (wb: WaterBody) => void;
   onSelectMandal?: (mandal: VizianagaramMandalData) => void;
   selectedMandalId: string | null;
+  viewFilter?: 'all' | 'extinct' | 'red' | 'green' | 'yellow' | 'blue';
   theme: 'light' | 'dark';
   showRivers?: boolean;
   showTanks?: boolean;
@@ -565,6 +571,7 @@ export const VizianagaramCadastralMapSvg: React.FC<VizianagaramCadastralMapSvgPr
   onSelectWaterBody,
   onSelectMandal,
   selectedMandalId,
+  viewFilter = 'all',
   theme,
   showRivers = true,
   onSwitchDistrict,
@@ -573,46 +580,80 @@ export const VizianagaramCadastralMapSvg: React.FC<VizianagaramCadastralMapSvgPr
   const [hoveredMandal, setHoveredMandal] = useState<VizianagaramMandalData | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Floating on-canvas active inspection card state (Solves "kuch nahi ho raha hai" issue)
-  const [activeInfoCard, setActiveInfoCard] = useState<{
-    type: 'mandal' | 'river' | 'border' | 'sea';
-    title: string;
-    teluguTitle?: string;
-    subtitle: string;
-    statusColor: WaterBodyStatusColor;
-    statusBadge: string;
-    stats: { label: string; value: string; color?: string }[];
-    description: string;
-    waterBody?: WaterBody;
-  } | null>(() => {
-    const defaultMandal = VIZIANAGARAM_MANDALS.find(m => m.id === 'vizianagaram_hq') || VIZIANAGARAM_MANDALS[0];
-    const defaultWb = VIZIANAGARAM_ALL_MANDAL_WATER_BODIES[defaultMandal.id];
-    return {
-      type: 'mandal',
-      title: `${defaultMandal.name} Mandal`,
-      teluguTitle: defaultMandal.teluguName,
-      subtitle: `${defaultMandal.category} Micro-Catchment • ${defaultMandal.riverBasin}`,
-      statusColor: defaultMandal.statusColor,
-      statusBadge: defaultMandal.statusLabel,
-      stats: [
-        { label: 'Primary Asset', value: defaultMandal.primaryWaterBody, color: '#0284c7' },
-        { label: 'DWLR Ground Table', value: `${defaultMandal.groundwaterDepthMbgl} mbgl`, color: '#10b981' },
-        { label: 'Active Water Bodies', value: `${defaultMandal.waterBodiesCount} Monitored`, color: '#38bdf8' },
-        { label: 'ISRO WBIS NDWI', value: defaultWb?.bhuvanWbis?.ndwiScore ? `+${defaultWb.bhuvanWbis.ndwiScore.toFixed(2)}` : '+0.36', color: '#6366f1' },
-      ],
-      description: defaultWb?.description || 'Active surface irrigation and community water catchment monitored by APWRIMS.',
-      waterBody: defaultWb,
+  // Mouse Wheel Zoom
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.15 : 0.88;
+    setZoomLevel(prev => Math.max(0.6, Math.min(prev * factor, 3.5)));
+  };
+
+  // Drag Panning Handlers (Aage-Piche, Upar-Neeche)
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+  };
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging) return;
+    setPanOffset({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y,
+    });
+  }, [isDragging, dragStart]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    } else {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
     };
-  });
+  }, [isDragging, handleMouseMove, handleMouseUp]);
 
-  // Soft clear cadastral palette for high contrast & instant readability
+  const panStep = 80;
+  const panDirection = (dir: 'up' | 'down' | 'left' | 'right') => {
+    setPanOffset(prev => {
+      switch (dir) {
+        case 'up': return { ...prev, y: prev.y + panStep };
+        case 'down': return { ...prev, y: prev.y - panStep };
+        case 'left': return { ...prev, x: prev.x + panStep };
+        case 'right': return { ...prev, x: prev.x - panStep };
+      }
+    });
+  };
+
+  // Soft clear cadastral palette with 5-color filter highlighting & instant readability
   const getMandalFill = (mandal: VizianagaramMandalData) => {
     const isSelected = selectedMandalId === mandal.id;
     const isHovered = hoveredMandal?.id === mandal.id;
 
     if (isSelected) return '#bae6fd'; // Bright active selection blue
     if (isHovered) return '#fed7aa'; // Bright hover saffron
+
+    // If 5-Color condition filter is active, highlight matching mandals and subtly dim others
+    if (viewFilter && viewFilter !== 'all') {
+      const isMatch = (viewFilter === 'extinct' && mandal.statusColor === 'grey') ||
+                      (viewFilter === 'red' && mandal.statusColor === 'red') ||
+                      (viewFilter === 'green' && mandal.statusColor === 'green') ||
+                      (viewFilter === 'yellow' && mandal.statusColor === 'yellow') ||
+                      (viewFilter === 'blue' && mandal.statusColor === 'blue');
+      if (!isMatch) {
+        return '#f1f5f9'; // soft dim for non-matching mandals
+      }
+    }
 
     // Distinct alternating cadastral tones so adjacent mandals never look the same
     switch (mandal.id) {
@@ -664,44 +705,41 @@ export const VizianagaramCadastralMapSvg: React.FC<VizianagaramCadastralMapSvgPr
   const handleMandalClick = (mandal: VizianagaramMandalData) => {
     if (onSelectMandal) onSelectMandal(mandal);
     const mandalWb = VIZIANAGARAM_ALL_MANDAL_WATER_BODIES[mandal.id];
-    if (mandalWb) {
-      if (onSelectWaterBody) onSelectWaterBody(mandalWb);
-      setActiveInfoCard({
-        type: 'mandal',
-        title: `${mandal.name} Mandal`,
-        teluguTitle: mandal.teluguName,
-        subtitle: `${mandal.category} Catchment • ${mandal.riverBasin}`,
-        statusColor: mandal.statusColor,
-        statusBadge: mandal.statusLabel,
-        stats: [
-          { label: 'Primary Water Body', value: mandal.primaryWaterBody, color: '#0284c7' },
-          { label: 'DWLR Ground Table', value: `${mandal.groundwaterDepthMbgl} mbgl`, color: '#10b981' },
-          { label: 'Monitored Assets', value: `${mandal.waterBodiesCount} Water Bodies`, color: '#38bdf8' },
-          { label: 'ISRO NDWI Score', value: mandalWb.bhuvanWbis?.ndwiScore ? `+${mandalWb.bhuvanWbis.ndwiScore.toFixed(2)}` : '+0.36', color: '#6366f1' },
-          { label: 'TDS Sensor', value: `${mandalWb.tdsPpm || 240} ppm`, color: '#f59e0b' },
-          { label: 'Recharge Structures', value: `${mandal.rechargeStructuresCount} Check Dams/Tanks`, color: '#10b981' },
-        ],
-        description: mandalWb.description || `Primary hydrological zone of ${mandal.name}. Active APWRIMS telemetry.`,
-        waterBody: mandalWb,
-      });
+    if (mandalWb && onSelectWaterBody) {
+      onSelectWaterBody(mandalWb);
     }
+    // Directly scroll down to the full telemetry dossier below the map (no popup card blocking view)
+    setTimeout(() => {
+      const el = document.getElementById('apwrims-dossier');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 60);
   };
 
   const handleRiverClick = (riverName: string, description: string, discharge: string, level: string, danger: string) => {
-    setActiveInfoCard({
-      type: 'river',
-      title: `${riverName} Basin`,
-      subtitle: `Perennial Hydrological System • Vizianagaram Basin`,
-      statusColor: 'blue',
-      statusBadge: 'Continuous Flow • Monitored via CWC Gauge',
-      stats: [
-        { label: 'Live Discharge', value: discharge, color: '#0284c7' },
-        { label: 'Current Gauge Level', value: level, color: '#10b981' },
-        { label: 'Danger Mark', value: danger, color: '#ef4444' },
-        { label: 'CWC Telemetry', value: 'Live 1-hr Telemetry', color: '#6366f1' },
-      ],
-      description,
-    });
+    const riverWb = Object.values(VIZIANAGARAM_ALL_MANDAL_WATER_BODIES).find(
+      w => w.name.toLowerCase().includes(riverName.toLowerCase()) || w.description.toLowerCase().includes(riverName.toLowerCase())
+    ) || VIZIANAGARAM_ALL_MANDAL_WATER_BODIES['nellimarla'];
+    if (riverWb && onSelectWaterBody) {
+      onSelectWaterBody({
+        ...riverWb,
+        name: `${riverName} Basin Gauge`,
+        description,
+        liveTelemetry: {
+          ...riverWb.liveTelemetry,
+          dischargeCusecs: parseInt(discharge) || 240,
+          waterLevelM: parseFloat(level) || 45.2,
+          dangerLevelM: parseFloat(danger) || 49.0,
+        }
+      });
+    }
+    setTimeout(() => {
+      const el = document.getElementById('apwrims-dossier');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 60);
   };
 
   const handleBorderClick = (regionName: string, info: string) => {
@@ -713,49 +751,121 @@ export const VizianagaramCadastralMapSvg: React.FC<VizianagaramCadastralMapSvgPr
       onSwitchDistrict('Visakhapatnam');
       return;
     }
-
-    setActiveInfoCard({
-      type: regionName === 'BAY OF BENGAL' ? 'sea' : 'border',
-      title: regionName,
-      subtitle: regionName === 'BAY OF BENGAL' ? 'Coastal Marine Delta & Estuary' : 'Inter-District Hydrological Boundary',
-      statusColor: 'blue',
-      statusBadge: regionName === 'BAY OF BENGAL' ? 'Marine Coastline • Active Estuary Outflow' : 'Regional Basin Contiguity',
-      stats: [
-        { label: 'Border Jurisdiction', value: regionName, color: '#0284c7' },
-        { label: 'Watershed Exchange', value: regionName === 'BAY OF BENGAL' ? '45 km Coastline Delta' : 'Upper Catchment Runoff', color: '#10b981' },
-      ],
-      description: info,
-    });
+    setTimeout(() => {
+      const el = document.getElementById('apwrims-dossier');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 60);
   };
 
   return (
     <div className="relative w-full h-full select-none overflow-hidden rounded-2xl bg-[#f8fafc]">
-      {/* Discreet Zoom & Pan Controls on Top-Right */}
-      <div className="absolute top-3 right-3 z-20 flex items-center gap-1 bg-white/95 backdrop-blur-md p-1.5 rounded-xl border border-slate-300 shadow-md">
-        <button
-          onClick={() => setZoomLevel((z) => Math.min(2.4, z + 0.2))}
-          className="p-1.5 hover:bg-slate-100 rounded-lg text-xs font-bold text-slate-700 transition-colors cursor-pointer"
-          title="Zoom In"
-        >
-          <ZoomIn className="w-4 h-4 text-blue-600" />
-        </button>
-        <button
-          onClick={() => setZoomLevel((z) => Math.max(0.8, z - 0.2))}
-          className="p-1.5 hover:bg-slate-100 rounded-lg text-xs font-bold text-slate-700 transition-colors cursor-pointer"
-          title="Zoom Out"
-        >
-          <ZoomOut className="w-4 h-4 text-blue-600" />
-        </button>
-        <button
-          onClick={() => {
-            setZoomLevel(1);
-            setPanOffset({ x: 0, y: 0 });
-          }}
-          className="p-1.5 hover:bg-slate-100 rounded-lg text-xs font-bold text-slate-700 transition-colors cursor-pointer"
-          title="Reset View"
-        >
-          <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
-        </button>
+      {/* 5-Color Verified Condition Legend in Top-Left (Non-blocking) */}
+      <div className="absolute top-3 left-3 z-20 flex flex-wrap items-center gap-1.5 bg-white/95 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-slate-300 shadow-sm text-[11px] font-bold">
+        <span className="text-slate-500 font-mono uppercase text-[10px] mr-1 hidden sm:inline">Condition:</span>
+        <span className="flex items-center gap-1 text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
+          <span className="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+          <span>1. Extinct</span>
+        </span>
+        <span className="flex items-center gap-1 text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md">
+          <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
+          <span>2. Danger Zone</span>
+        </span>
+        <span className="flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+          <span>3. Good</span>
+        </span>
+        <span className="flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+          <span>4. Medium</span>
+        </span>
+        <span className="flex items-center gap-1 text-sky-700 bg-sky-50 px-2 py-0.5 rounded-md">
+          <span className="w-2.5 h-2.5 rounded-full bg-sky-500"></span>
+          <span>5. Normal</span>
+        </span>
+      </div>
+
+      {/* Directional Pad and Zoom Controls on Top-Right */}
+      <div className="absolute top-3 right-3 z-20 flex flex-col items-end gap-1.5">
+        <div className="flex items-center gap-1 bg-white/95 backdrop-blur-md p-1 rounded-xl border border-slate-300 shadow-sm">
+          <button
+            onClick={() => setZoomLevel((z) => Math.min(3, z + 0.25))}
+            className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-700 transition-colors cursor-pointer"
+            title="Zoom In (Aage / Pass)"
+          >
+            <ZoomIn className="w-4 h-4 text-blue-600" />
+          </button>
+          <button
+            onClick={() => setZoomLevel((z) => Math.max(0.65, z - 0.25))}
+            className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-700 transition-colors cursor-pointer"
+            title="Zoom Out (Piche / Door)"
+          >
+            <ZoomOut className="w-4 h-4 text-blue-600" />
+          </button>
+          <button
+            onClick={() => {
+              setZoomLevel(1);
+              setPanOffset({ x: 0, y: 0 });
+            }}
+            className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-700 transition-colors cursor-pointer"
+            title="Reset View"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+          </button>
+        </div>
+
+        {/* Directional Pad (Aage / Piche / Upar / Neeche) */}
+        <div className="bg-white/95 backdrop-blur-md p-1.5 rounded-xl border border-slate-300 shadow-sm flex flex-col items-center gap-1">
+          <span className="text-[9px] font-mono text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1">
+            <Move className="w-3 h-3 text-sky-600" />
+            <span>Pan Map</span>
+          </span>
+          <div className="grid grid-cols-3 gap-1">
+            <div></div>
+            <button
+              onClick={() => panDirection('up')}
+              title="Pan Up (Upar)"
+              className="p-1 rounded-md bg-slate-100 hover:bg-sky-100 text-slate-700 transition-colors cursor-pointer"
+            >
+              <ArrowUp className="w-3.5 h-3.5" />
+            </button>
+            <div></div>
+            <button
+              onClick={() => panDirection('left')}
+              title="Pan Left (Piche / Baye)"
+              className="p-1 rounded-md bg-slate-100 hover:bg-sky-100 text-slate-700 transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => {
+                setZoomLevel(1);
+                setPanOffset({ x: 0, y: 0 });
+              }}
+              title="Center"
+              className="p-1 rounded-md bg-slate-200 text-slate-800 text-[9px] font-bold cursor-pointer"
+            >
+              •
+            </button>
+            <button
+              onClick={() => panDirection('right')}
+              title="Pan Right (Aage / Daye)"
+              className="p-1 rounded-md bg-slate-100 hover:bg-sky-100 text-slate-700 transition-colors cursor-pointer"
+            >
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+            <div></div>
+            <button
+              onClick={() => panDirection('down')}
+              title="Pan Down (Neeche)"
+              className="p-1 rounded-md bg-slate-100 hover:bg-sky-100 text-slate-700 transition-colors cursor-pointer"
+            >
+              <ArrowDown className="w-3.5 h-3.5" />
+            </button>
+            <div></div>
+          </div>
+        </div>
       </div>
 
       {/* ============================================================== */}
@@ -763,12 +873,9 @@ export const VizianagaramCadastralMapSvg: React.FC<VizianagaramCadastralMapSvgPr
       {/* ============================================================== */}
       <svg
         viewBox="0 0 950 680"
-        className="w-full h-full"
-        style={{
-          transform: `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`,
-          transformOrigin: 'center center',
-          transition: 'transform 0.25s ease-out',
-        }}
+        onMouseDown={handleMouseDown}
+        onWheel={handleWheel}
+        className="w-full h-full cursor-grab active:cursor-grabbing"
       >
         <defs>
           <pattern id="vzmGridPattern" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -980,12 +1087,24 @@ export const VizianagaramCadastralMapSvg: React.FC<VizianagaramCadastralMapSvgPr
                   {mandal.teluguName.split(' ')[0]}
                 </text>
 
-                {/* Dedicated Water Body Node on EVERY SINGLE Mandal */}
+                {/* Dedicated Water Body Node on EVERY SINGLE Mandal with 5-Color Standards */}
                 {(() => {
                   const nodeY = mandal.center.y + 20;
+                  const isExtinct = mandal.statusColor === 'grey';
                   const isRed = mandal.statusColor === 'red';
                   const isGreen = mandal.statusColor === 'green';
-                  const pinColor = isRed ? '#ef4444' : isGreen ? '#10b981' : '#0284c7';
+                  const isYellow = mandal.statusColor === 'yellow';
+                  const isBlue = mandal.statusColor === 'blue';
+
+                  const pinColor = isExtinct
+                    ? '#64748b'
+                    : isRed
+                    ? '#ef4444'
+                    : isGreen
+                    ? '#10b981'
+                    : isYellow
+                    ? '#f59e0b'
+                    : '#0284c7';
 
                   return (
                     <g
@@ -996,28 +1115,33 @@ export const VizianagaramCadastralMapSvg: React.FC<VizianagaramCadastralMapSvgPr
                         handleMandalClick(mandal);
                       }}
                     >
-                      {/* Pulse Ring for Selected / High Alert */}
+                      {/* Pulse Ring for Selected or Danger Alert */}
                       {(isSelected || isRed) && (
-                        <circle cx="0" cy="0" r="14" fill="none" stroke={pinColor} strokeWidth="1.6" strokeDasharray="3 3">
-                          <animate attributeName="r" values="8;18;8" dur="2.5s" repeatCount="indefinite" />
-                          <animate attributeName="opacity" values="0.8;0.2;0.8" dur="2.5s" repeatCount="indefinite" />
+                        <circle cx="0" cy="0" r="14" fill="none" stroke={pinColor} strokeWidth="1.8" strokeDasharray="3 3">
+                          <animate attributeName="r" values="8;20;8" dur="2s" repeatCount="indefinite" />
+                          <animate attributeName="opacity" values="0.9;0.15;0.9" dur="2s" repeatCount="indefinite" />
                         </circle>
+                      )}
+
+                      {/* Extinct Dashed Halo */}
+                      {isExtinct && (
+                        <circle cx="0" cy="0" r="11" fill="none" stroke="#64748b" strokeWidth="1.2" strokeDasharray="2 2" />
                       )}
 
                       {/* Main Node Circle */}
                       <circle
                         cx="0"
                         cy="0"
-                        r={isSelected ? '6.5' : '5'}
+                        r={isSelected ? '7' : '5.5'}
                         fill={pinColor}
                         stroke="#ffffff"
                         strokeWidth="1.8"
-                        filter="drop-shadow(0 1px 3px rgba(0,0,0,0.3))"
+                        filter="drop-shadow(0 1px 3px rgba(0,0,0,0.35))"
                       />
 
-                      {/* Micro Droplet symbol */}
-                      <text x="0" y="2.5" fontSize="6" fill="#ffffff" textAnchor="middle" className="select-none pointer-events-none font-bold">
-                        💧
+                      {/* Icon symbol: ✕ for Extinct, ! for Danger, 💧 for Water */}
+                      <text x="0" y={isExtinct ? "2" : isRed ? "2.2" : "2.5"} fontSize={isExtinct ? "6.5" : isRed ? "6" : "6"} fill="#ffffff" textAnchor="middle" className="select-none pointer-events-none font-bold">
+                        {isExtinct ? '✕' : isRed ? '!' : '💧'}
                       </text>
                     </g>
                   );
@@ -1226,79 +1350,6 @@ export const VizianagaramCadastralMapSvg: React.FC<VizianagaramCadastralMapSvgPr
           </g>
         </g>
       </svg>
-
-      {/* ============================================================== */}
-      {/* FLOATING INTERACTIVE TELEMETRY CARD (SOLVES "KUCH NAHI HO RAHA")*/}
-      {/* ============================================================== */}
-      {activeInfoCard && (
-        <div className="absolute bottom-3 left-3 z-30 max-w-[340px] sm:max-w-[420px] bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-4 text-white shadow-2xl animate-in fade-in slide-in-from-bottom-3 duration-200">
-          <div className="flex items-start justify-between gap-2 border-b border-slate-800 pb-2.5">
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-                <h4 className="text-sm font-extrabold text-white flex items-center gap-1.5 flex-wrap">
-                  <span>{activeInfoCard.title}</span>
-                  {activeInfoCard.teluguTitle && (
-                    <span className="text-xs font-semibold text-sky-300">({activeInfoCard.teluguTitle})</span>
-                  )}
-                </h4>
-              </div>
-              <p className="text-[11px] text-slate-400">{activeInfoCard.subtitle}</p>
-            </div>
-
-            <button
-              onClick={() => setActiveInfoCard(null)}
-              className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Quick Metrics Grid */}
-          <div className="grid grid-cols-2 gap-2 my-2.5">
-            {activeInfoCard.stats.map((s, idx) => (
-              <div key={idx} className="bg-slate-800/80 border border-slate-700/60 p-2 rounded-xl">
-                <span className="text-[9.5px] uppercase tracking-wider text-slate-400 block font-mono">
-                  {s.label}
-                </span>
-                <span className="text-xs font-bold font-mono text-white block mt-0.5 truncate" style={{ color: s.color || '#ffffff' }}>
-                  {s.value}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          <p className="text-[11px] text-slate-300 leading-relaxed font-normal mb-3">
-            {activeInfoCard.description}
-          </p>
-
-          {/* Direct Action Buttons on Map */}
-          <div className="flex items-center gap-2 pt-1 border-t border-slate-800">
-            {onLodgeComplaint && (
-              <button
-                onClick={onLodgeComplaint}
-                className="flex-1 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs"
-              >
-                <AlertTriangle className="w-3.5 h-3.5" />
-                <span>Lodge Complaint</span>
-              </button>
-            )}
-
-            <button
-              onClick={() => {
-                const element = document.getElementById('apwrims-dossier');
-                if (element) {
-                  element.scrollIntoView({ behavior: 'smooth' });
-                }
-              }}
-              className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
-            >
-              <span>View Dossier</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
